@@ -37,16 +37,16 @@ const chatController = {
           chat.step = chatFlow.ASK_SKIN_TYPE;
           response = {
             message: "Halo! Saya adalah SkinBot, asisten skincare Anda. Untuk memberikan rekomendasi yang tepat, saya perlu tahu jenis kulit Anda. Apakah kulit Anda:",
-            options: ["Normal", "Berminyak", "Kering", "Kombinasi"]
+            options: ["Normal", "Berminyak", "Kering"]
           };
           break;
 
         case chatFlow.ASK_SKIN_TYPE:
           const skinType = message.toLowerCase();
-          if (!['normal', 'berminyak', 'kering', 'kombinasi'].includes(skinType)) {
+          if (!['normal', 'berminyak', 'kering'].includes(skinType)) {
             response = {
-              message: "Maaf, pilihan tidak valid. Silakan pilih: Normal, Berminyak, Kering, atau Kombinasi",
-              options: ["Normal", "Berminyak", "Kering", "Kombinasi"]
+              message: "Maaf, pilihan tidak valid. Silakan pilih: Normal, Berminyak, atau Kering",
+              options: ["Normal", "Berminyak", "Kering"]
             };
             break;
           }
@@ -55,7 +55,7 @@ const chatController = {
           chat.step = chatFlow.ASK_CONCERN;
           response = {
             message: "Apa masalah kulit utama yang ingin Anda atasi?",
-            options: ["Jerawat", "Kulit Kusam", "Pori-pori Besar", "Kulit Kering", "Tidak ada masalah khusus"]
+            options: ["Jerawat", "Kulit Kusam", "Kulit Kering", "Tidak ada masalah khusus"]
           };
           break;
 
@@ -63,8 +63,8 @@ const chatController = {
           chat.data.concern = message;
           chat.step = chatFlow.ASK_BUDGET;
           response = {
-            message: "Berapa budget yang Anda siapkan untuk 1 produk skincare?",
-            options: ["Dibawah 50rb", "50-100rb", "100-200rb", "Diatas 200rb"]
+            message: "Berapa budget yang Anda siapkan untuk sunscreen?",
+            options: ["0-100rb", "100-200rb", "Diatas 200rb"]
           };
           break;
 
@@ -73,29 +73,25 @@ const chatController = {
           chat.step = chatFlow.GIVE_RECOMMENDATIONS;
 
           const priceRange = {
-            'Dibawah 50rb': { $lt: 50000 },
-            '50-100rb': { $gte: 50000, $lte: 100000 },
-            '100-200rb': { $gt: 100000, $lte: 200000 },
+            '0-100rb': { $lt: 100000 },
+            '100-200rb': { $gte: 100000, $lte: 200000 },
             'Diatas 200rb': { $gt: 200000 }
           };
 
           const products = await Product.find({
             skinType: chat.data.skinType,
+            category: 'sunscreen',
             price: priceRange[chat.data.budget] || {},
             ...(chat.data.concern !== 'Tidak ada masalah khusus' && {
               concerns: chat.data.concern.toLowerCase()
             })
           });
 
-          const recommendations = {
-            cleanser: products.filter(p => p.category === 'cleanser').map(p => p.name),
-            moisturizer: products.filter(p => p.category === 'moisturizer').map(p => p.name),
-            sunscreen: products.filter(p => p.category === 'sunscreen').map(p => p.name)
-          };
-
           response = {
-            message: `Berdasarkan informasi yang Anda berikan:\nJenis Kulit: ${chat.data.skinType}\nMasalah Utama: ${chat.data.concern}\nBudget: ${chat.data.budget}\n\nBerikut rekomendasi produk untuk Anda:`,
-            recommendations,
+            message: `Berdasarkan informasi yang Anda berikan:\nJenis Kulit: ${chat.data.skinType}\nMasalah Utama: ${chat.data.concern}\nBudget: ${chat.data.budget}\n\nBerikut rekomendasi sunscreen untuk Anda:`,
+            recommendations: {
+              sunscreen: products.map(p => p.name)
+            },
             options: ["Mulai Konsultasi Baru"]
           };
 

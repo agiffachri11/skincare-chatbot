@@ -9,13 +9,12 @@ const productSchema = new mongoose.Schema({
   },
   category: {
     type: String,
-    required: true,
-    enum: ['cleanser', 'moisturizer', 'sunscreen']
+    default: 'sunscreen' 
   },
   skinType: {
     type: String,
     required: true,
-    enum: ['normal', 'berminyak', 'kering', 'kombinasi']
+    enum: ['normal', 'berminyak', 'kering']
   },
   price: {
     type: Number,
@@ -24,7 +23,7 @@ const productSchema = new mongoose.Schema({
   description: String,
   concerns: [{
     type: String,
-    enum: ['jerawat', 'kusam', 'pori-pori', 'kering', 'normal', 'berminyak']
+    enum: ['jerawat', 'kusam', 'kering', 'normal']
   }]
 }, {
   timestamps: true
