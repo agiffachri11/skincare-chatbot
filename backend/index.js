@@ -1,29 +1,35 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const connectDB = require('./config/db');  // Pastikan path benar
-const authRoutes = require('./routes/authRoutes');
-const chatRoutes = require('./routes/chatRoutes');
+const connectDB = require('./config/db');
+
+// Log untuk debug
+console.log('Starting server...');
+console.log('Environment check:', {
+  NODE_ENV: process.env.NODE_ENV,
+  MONGODB_URI_EXISTS: !!process.env.MONGODB_URI
+});
 
 const app = express();
-
-// Connect to MongoDB
-connectDB();
 
 // Middleware
 app.use(cors());
 app.use(express.json());
 
-// Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/chat', chatRoutes);
-
-// Base route
+// Test route
 app.get('/', (req, res) => {
-  res.json({ message: 'Welcome to Skincare Chatbot API' });
+  res.json({ message: 'API is running' });
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+// Connect to database
+connectDB()
+  .then(() => {
+    const PORT = process.env.PORT || 8080;
+    app.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
+    });
+  })
+  .catch((error) => {
+    console.error('Server initialization failed:', error.message);
+    process.exit(1);
+  });
