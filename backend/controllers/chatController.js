@@ -117,30 +117,30 @@ const chatController = {
             response = {
               message: `❌ Maaf, tidak ditemukan produk yang sesuai dengan kriteria Anda:
 
-🔹 Jenis Kulit: ${capitalizeFirstLetter(chat.data.skinType)}
-🔹 Masalah Utama: ${chat.data.concern}
-🔹 Range Budget: ${chat.data.budget}
+                🔹 Jenis Kulit: ${capitalizeFirstLetter(chat.data.skinType)}
+                🔹 Masalah Utama: ${chat.data.concern}
+                🔹 Range Budget: ${chat.data.budget}
 
-💡 Silakan coba dengan kriteria lain.`,
-              options: ["Mulai Konsultasi Baru"]
-            };
-          } else {
-            const recommendationsList = products.map(p => 
-              `🔸 ${p.name}
-💰 ${formatPrice(p.price)}
-📝 ${p.description}`
-            ).join('\n\n');
+                💡 Silakan coba dengan kriteria lain.`,
+                            options: ["Mulai Konsultasi Baru"]
+                            };
+                        } else {
+                            const recommendationsList = products.map(p => 
+                            `🔸 ${p.name}
+                💰 ${formatPrice(p.price)}
+                📝 ${p.description}`
+                            ).join('\n\n');
 
-            response = {
-              message: `✨ Hasil Analisis Profil Kulit Anda:
+                            response = {
+                            message: `✨ Hasil Analisis Profil Kulit Anda:
 
-👤 Jenis Kulit: ${capitalizeFirstLetter(chat.data.skinType)}
-🎯 Masalah Utama: ${chat.data.concern}
-💰 Range Budget: ${chat.data.budget}
+                👤 Jenis Kulit: ${capitalizeFirstLetter(chat.data.skinType)}
+                🎯 Masalah Utama: ${chat.data.concern}
+                💰 Range Budget: ${chat.data.budget}
 
-🌟 Rekomendasi Sunscreen untuk Anda:
+                🌟 Rekomendasi Sunscreen untuk Anda:
 
-${recommendationsList}`,
+                ${recommendationsList}`,
               recommendations: {
                 sunscreen: products.map(p => ({
                   name: p.name,
@@ -148,7 +148,7 @@ ${recommendationsList}`,
                   description: p.description
                 }))
               },
-              options: ["Mulai Konsultasi Baru", "Lihat Detail Produk"]
+              options: ["Mulai Konsultasi Baru"]
             };
           }
 
