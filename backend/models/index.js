@@ -29,6 +29,8 @@ const productSchema = new mongoose.Schema({
   timestamps: true
 });
 
+productSchema.index({ skinType: 1, price: 1, concerns: 1 });
+
 // Chat Schema
 const chatSchema = new mongoose.Schema({
   userId: {
