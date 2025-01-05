@@ -31,6 +31,8 @@ function App() {
               </ProtectedRoute>
             } 
           />
+          {/* Tambahkan route untuk menangani 404 */}
+          <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </Router>
     </AuthProvider>
