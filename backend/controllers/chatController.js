@@ -1,3 +1,31 @@
+const { GoogleGenerativeAI } = require('@google/generative-ai');
+const { Chat, Product } = require('../models');
+
+// Konfigurasi Gemini
+const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
+const generation_config = {
+  temperature: 1,
+  topP: 0.95,
+  topK: 40,
+  maxOutputTokens: 8192,
+  responseMimeType: "text/plain",
+};
+
+const model = genAI.getGenerativeModel({
+  model: "gemini-1.5-pro",
+  generation_config
+});
+
+// Helper function
+const formatPrice = (price) => {
+  return new Intl.NumberFormat('id-ID', {
+    style: 'currency',
+    currency: 'IDR',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  }).format(price);
+};
+
 const chatController = {
   handleChat: async (req, res) => {
     console.log('=== Chat Request ===');
@@ -17,7 +45,7 @@ const chatController = {
       let recommendations = null;
 
       // Cek jika pesan terkait permintaan rekomendasi
-      if (message && message.toLowerCase().includes('rekomendasi') || message.toLowerCase().includes('produk')) {
+      if (message && (message.toLowerCase().includes('rekomendasi') || message.toLowerCase().includes('produk'))) {
         // Cari semua produk dari database
         const products = await Product.find();
         
@@ -83,3 +111,6 @@ const chatController = {
     }
   }
 };
+
+// Export controller
+module.exports = chatController;
