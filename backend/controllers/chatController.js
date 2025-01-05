@@ -1,4 +1,9 @@
+const OpenAI = require('openai');
 const { Chat, Product } = require('../models');
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
 
 const chatFlow = {
   WELCOME: 0,
@@ -8,7 +13,7 @@ const chatFlow = {
   GIVE_RECOMMENDATIONS: 4
 };
 
-// Helper function
+// Helper functions
 const capitalizeFirstLetter = (string) => {
   return string.charAt(0).toUpperCase() + string.slice(1);
 };
@@ -45,12 +50,21 @@ const chatController = {
       }
 
       let response = {};
+      let aiResponse;
 
       switch (chat.step) {
         case chatFlow.WELCOME:
+          aiResponse = await openai.chat.completions.create({
+            model: "gpt-4",
+            messages: [{
+              role: "system",
+              content: "Kamu adalah SkinBot, asisten skincare yang ramah dan profesional. Berikan sapaan hangat dan tanyakan jenis kulit pengguna."
+            }]
+          });
+
           chat.step = chatFlow.ASK_SKIN_TYPE;
           response = {
-            message: "👋 Halo! Saya adalah SkinBot, asisten skincare Anda.\n\n💆‍♀️ Untuk memberikan rekomendasi yang tepat, saya perlu mengetahui beberapa hal tentang kulit Anda.\n\n📝 Pertama, mohon pilih jenis kulit Anda:",
+            message: aiResponse.choices[0].message.content,
             options: ["Normal", "Berminyak", "Kering"]
           };
           break;
@@ -58,8 +72,16 @@ const chatController = {
         case chatFlow.ASK_SKIN_TYPE:
           const skinType = message.toLowerCase();
           if (!['normal', 'berminyak', 'kering'].includes(skinType)) {
+            aiResponse = await openai.chat.completions.create({
+              model: "gpt-4",
+              messages: [{
+                role: "system",
+                content: "Pengguna memberikan jenis kulit yang tidak valid. Minta mereka memilih dari opsi yang tersedia dengan cara yang ramah."
+              }]
+            });
+
             response = {
-              message: "❌ Maaf, pilihan tidak valid. Silakan pilih salah satu jenis kulit berikut:",
+              message: aiResponse.choices[0].message.content,
               options: ["Normal", "Berminyak", "Kering"]
             };
             break;
@@ -67,8 +89,17 @@ const chatController = {
 
           chat.data.skinType = skinType;
           chat.step = chatFlow.ASK_CONCERN;
+          
+          aiResponse = await openai.chat.completions.create({
+            model: "gpt-4",
+            messages: [{
+              role: "system",
+              content: `Pengguna memiliki kulit ${skinType}. Tanyakan masalah kulit utama mereka dengan cara yang empatik.`
+            }]
+          });
+
           response = {
-            message: "✅ Baik, saya mengerti jenis kulit Anda.\n\n🤔 Selanjutnya, apa masalah kulit utama yang ingin Anda atasi?",
+            message: aiResponse.choices[0].message.content,
             options: ["Jerawat", "Kulit Kusam", "Kulit Kering", "Tidak ada masalah khusus"]
           };
           break;
@@ -76,8 +107,17 @@ const chatController = {
         case chatFlow.ASK_CONCERN:
           chat.data.concern = message;
           chat.step = chatFlow.ASK_BUDGET;
+
+          aiResponse = await openai.chat.completions.create({
+            model: "gpt-4",
+            messages: [{
+              role: "system",
+              content: `Pengguna memiliki kulit ${chat.data.skinType} dengan masalah ${message}. Tanyakan budget mereka untuk sunscreen dengan cara yang profesional.`
+            }]
+          });
+
           response = {
-            message: "💭 Terima kasih atas informasinya.\n\n💰 Terakhir, berapa budget yang Anda siapkan untuk sunscreen?",
+            message: aiResponse.choices[0].message.content,
             options: ["0-100rb", "100-200rb", "Diatas 200rb"]
           };
           break;
@@ -86,7 +126,6 @@ const chatController = {
           chat.data.budget = message;
           chat.step = chatFlow.GIVE_RECOMMENDATIONS;
 
-          // Debug logs
           console.log('Search criteria:', {
             skinType: chat.data.skinType,
             concern: chat.data.concern,
@@ -114,33 +153,46 @@ const chatController = {
           console.log('Found products:', products);
 
           if (!products || products.length === 0) {
+            aiResponse = await openai.chat.completions.create({
+              model: "gpt-4",
+              messages: [{
+                role: "system",
+                content: `Tidak ditemukan produk yang sesuai untuk:
+                Jenis Kulit: ${chat.data.skinType}
+                Masalah: ${chat.data.concern}
+                Budget: ${chat.data.budget}
+                
+                Berikan respon yang empatik dan sarankan untuk mencoba kriteria lain.`
+              }]
+            });
+
             response = {
-              message: `❌ Maaf, tidak ditemukan produk yang sesuai dengan kriteria Anda:
+              message: aiResponse.choices[0].message.content,
+              options: ["Mulai Konsultasi Baru"]
+            };
+          } else {
+            const productDetails = products.map(p => 
+              `${p.name} (${formatPrice(p.price)}): ${p.description}`
+            ).join('\n');
 
-                🔹 Jenis Kulit: ${capitalizeFirstLetter(chat.data.skinType)}
-                🔹 Masalah Utama: ${chat.data.concern}
-                🔹 Range Budget: ${chat.data.budget}
+            aiResponse = await openai.chat.completions.create({
+              model: "gpt-4",
+              messages: [{
+                role: "system",
+                content: `Berikan rekomendasi sunscreen berdasarkan:
+                Jenis Kulit: ${chat.data.skinType}
+                Masalah: ${chat.data.concern}
+                Budget: ${chat.data.budget}
+                
+                Produk tersedia:
+                ${productDetails}
+                
+                Berikan penjelasan yang informatif dan personal tentang mengapa produk ini cocok untuk pengguna.`
+              }]
+            });
 
-                💡 Silakan coba dengan kriteria lain.`,
-                            options: ["Mulai Konsultasi Baru"]
-                            };
-                        } else {
-                            const recommendationsList = products.map(p => 
-                            `🔸 ${p.name}
-                💰 ${formatPrice(p.price)}
-                📝 ${p.description}`
-                            ).join('\n\n');
-
-                            response = {
-                            message: `✨ Hasil Analisis Profil Kulit Anda:
-
-                👤 Jenis Kulit: ${capitalizeFirstLetter(chat.data.skinType)}
-                🎯 Masalah Utama: ${chat.data.concern}
-                💰 Range Budget: ${chat.data.budget}
-
-                🌟 Rekomendasi Sunscreen untuk Anda:
-
-                ${recommendationsList}`,
+            response = {
+              message: aiResponse.choices[0].message.content,
               recommendations: {
                 sunscreen: products.map(p => ({
                   name: p.name,
@@ -152,15 +204,22 @@ const chatController = {
             };
           }
 
-          // Reset chat untuk konsultasi baru
           chat.step = chatFlow.WELCOME;
           chat.data = {};
           break;
 
         default:
+          aiResponse = await openai.chat.completions.create({
+            model: "gpt-4",
+            messages: [{
+              role: "system",
+              content: "Terjadi kesalahan. Berikan respon yang meminta pengguna untuk memulai ulang konsultasi dengan cara yang sopan."
+            }]
+          });
+
           chat.step = chatFlow.WELCOME;
           response = {
-            message: "❌ Maaf, terjadi kesalahan. Mari mulai dari awal.",
+            message: aiResponse.choices[0].message.content,
             options: ["Mulai Konsultasi"]
           };
       }
