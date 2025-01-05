@@ -55,7 +55,7 @@ const chatController = {
       switch (chat.step) {
         case chatFlow.WELCOME:
           aiResponse = await openai.chat.completions.create({
-            model: "gpt-4",
+            model: "gpt-3.5-turbo",
             messages: [{
               role: "system",
               content: "Kamu adalah SkinBot, asisten skincare yang ramah dan profesional. Berikan sapaan hangat dan tanyakan jenis kulit pengguna."
@@ -73,7 +73,7 @@ const chatController = {
           const skinType = message.toLowerCase();
           if (!['normal', 'berminyak', 'kering'].includes(skinType)) {
             aiResponse = await openai.chat.completions.create({
-              model: "gpt-4",
+              model: "gpt-3.5-turbo",
               messages: [{
                 role: "system",
                 content: "Pengguna memberikan jenis kulit yang tidak valid. Minta mereka memilih dari opsi yang tersedia dengan cara yang ramah."
@@ -91,7 +91,7 @@ const chatController = {
           chat.step = chatFlow.ASK_CONCERN;
           
           aiResponse = await openai.chat.completions.create({
-            model: "gpt-4",
+            model: "gpt-3.5-turbo",
             messages: [{
               role: "system",
               content: `Pengguna memiliki kulit ${skinType}. Tanyakan masalah kulit utama mereka dengan cara yang empatik.`
@@ -109,7 +109,7 @@ const chatController = {
           chat.step = chatFlow.ASK_BUDGET;
 
           aiResponse = await openai.chat.completions.create({
-            model: "gpt-4",
+            model: "gpt-3.5-turbo",
             messages: [{
               role: "system",
               content: `Pengguna memiliki kulit ${chat.data.skinType} dengan masalah ${message}. Tanyakan budget mereka untuk sunscreen dengan cara yang profesional.`
@@ -154,7 +154,7 @@ const chatController = {
 
           if (!products || products.length === 0) {
             aiResponse = await openai.chat.completions.create({
-              model: "gpt-4",
+              model: "gpt-3.5-turbo",
               messages: [{
                 role: "system",
                 content: `Tidak ditemukan produk yang sesuai untuk:
@@ -176,7 +176,7 @@ const chatController = {
             ).join('\n');
 
             aiResponse = await openai.chat.completions.create({
-              model: "gpt-4",
+              model: "gpt-3.5-turbo",
               messages: [{
                 role: "system",
                 content: `Berikan rekomendasi sunscreen berdasarkan:
@@ -210,7 +210,7 @@ const chatController = {
 
         default:
           aiResponse = await openai.chat.completions.create({
-            model: "gpt-4",
+            model: "gpt-3.5-turbo",
             messages: [{
               role: "system",
               content: "Terjadi kesalahan. Berikan respon yang meminta pengguna untuk memulai ulang konsultasi dengan cara yang sopan."
