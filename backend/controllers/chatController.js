@@ -1,39 +1,20 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { Chat, Product } = require('../models');
 
-// Konfigurasi Gemini
+// Konfigurasi Gemini sesuai kode asli
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
+const generation_config = {
+  temperature: 1,
+  topP: 0.95,
+  topK: 40,
+  maxOutputTokens: 8192,
+  responseMimeType: "text/plain",
+};
 
-const model = genAI.getGenerativeModel({ 
-  model: "gemini-pro",
-  generationConfig: {
-    temperature: 0.9,
-    topP: 1,
-    topK: 1,
-    maxOutputTokens: 2048,
-  },
+const model = genAI.getGenerativeModel({
+  model: "gemini-1.5-pro",
+  generation_config
 });
-
-const chatFlow = {
-  WELCOME: 0,
-  ASK_SKIN_TYPE: 1,
-  ASK_CONCERN: 2,
-  ASK_BUDGET: 3,
-  GIVE_RECOMMENDATIONS: 4
-};
-
-const capitalizeFirstLetter = (string) => {
-  return string.charAt(0).toUpperCase() + string.slice(1);
-};
-
-const formatPrice = (price) => {
-  return new Intl.NumberFormat('id-ID', {
-    style: 'currency',
-    currency: 'IDR',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0
-  }).format(price);
-};
 
 const chatController = {
   handleChat: async (req, res) => {
@@ -43,154 +24,113 @@ const chatController = {
 
     try {
       let chat = await Chat.findOne({ userId });
-      console.log('Existing chat:', chat);
-
       if (!chat) {
         chat = new Chat({ userId });
-        console.log('New chat created:', chat);
       }
 
-      let response = {};
+      // Mulai chat session
+      const chatSession = model.startChat({
+        history: chat.messages.map(msg => ({
+          role: msg.type,
+          parts: msg.content
+        }))
+      });
 
-      try {
-        switch (chat.step) {
-          case chatFlow.WELCOME:
-            chat.step = chatFlow.ASK_SKIN_TYPE;
-            response = {
-              message: "Halo! Saya adalah SkinBot, asisten skincare Anda. Untuk memberikan rekomendasi yang tepat, saya perlu tahu jenis kulit Anda. Silakan pilih:",
-              options: ["Normal", "Berminyak", "Kering"]
-            };
-            break;
+      let response;
 
-          case chatFlow.ASK_SKIN_TYPE:
-            const skinType = message.toLowerCase();
-            if (!['normal', 'berminyak', 'kering'].includes(skinType)) {
-              response = {
-                message: "Maaf, pilihan tidak valid. Silakan pilih jenis kulit Anda:",
-                options: ["Normal", "Berminyak", "Kering"]
-              };
-              break;
-            }
-
-            chat.data.skinType = skinType;
-            chat.step = chatFlow.ASK_CONCERN;
-            response = {
-              message: "Terima kasih! Sekarang, apa masalah kulit utama yang ingin Anda atasi?",
-              options: ["Jerawat", "Kulit Kusam", "Kulit Kering", "Tidak ada masalah khusus"]
-            };
-            break;
-
-          case chatFlow.ASK_CONCERN:
-            chat.data.concern = message;
-            chat.step = chatFlow.ASK_BUDGET;
-            response = {
-              message: `Saya mengerti masalah kulit Anda. Untuk memberikan rekomendasi sunscreen yang tepat, berapa budget yang Anda siapkan?`,
-              options: ["0-100rb", "100-200rb", "Diatas 200rb"]
-            };
-            break;
-
-          case chatFlow.ASK_BUDGET:
-            chat.data.budget = message;
-            chat.step = chatFlow.GIVE_RECOMMENDATIONS;
-
-            const priceRange = {
-              '0-100rb': { $lt: 100000 },
-              '100-200rb': { $gte: 100000, $lte: 200000 },
-              'Diatas 200rb': { $gt: 200000 }
-            };
-
-            const queryParams = {
-              skinType: chat.data.skinType,
-              category: 'sunscreen',
-              price: priceRange[chat.data.budget]
-            };
-
-            if (chat.data.concern !== 'Tidak ada masalah khusus') {
-              queryParams.concerns = chat.data.concern.toLowerCase();
-            }
-
-            const products = await Product.find(queryParams);
-
-            if (!products || products.length === 0) {
-              const prompt = `Berikan respon yang ramah bahwa tidak ada produk yang sesuai untuk:
-                Jenis Kulit: ${chat.data.skinType}
-                Masalah: ${chat.data.concern}
-                Budget: ${chat.data.budget}`;
-
-              const result = await model.generateContent(prompt);
-              const generatedText = await result.response.text();
-
-              response = {
-                message: generatedText,
-                options: ["Mulai Konsultasi Baru"]
-              };
-            } else {
-              const productList = products.map(p => `${p.name} (${formatPrice(p.price)}): ${p.description}`).join('\n');
-              const prompt = `Berikan rekomendasi sunscreen dengan gaya yang ramah berdasarkan:
-                Jenis Kulit: ${chat.data.skinType}
-                Masalah: ${chat.data.concern}
-                Budget: ${chat.data.budget}
-                
-                Daftar produk:
-                ${productList}`;
-
-              const result = await model.generateContent(prompt);
-              const generatedText = await result.response.text();
-
-              response = {
-                message: generatedText,
-                recommendations: {
-                  sunscreen: products.map(p => ({
-                    name: p.name,
-                    price: formatPrice(p.price),
-                    description: p.description
-                  }))
-                },
-                options: ["Mulai Konsultasi Baru"]
-              };
-            }
-
-            chat.step = chatFlow.WELCOME;
-            chat.data = {};
-            break;
-
-          default:
-            chat.step = chatFlow.WELCOME;
-            response = {
-              message: "Maaf, terjadi kesalahan. Mari mulai konsultasi dari awal.",
-              options: ["Mulai Konsultasi"]
-            };
-        }
-
-        if (message) {
-          chat.messages.push({
-            type: 'user',
-            content: message
-          });
-        }
-
-        chat.messages.push({
-          type: 'bot',
-          content: response.message
-        });
-
-        await chat.save();
-        console.log('Final response:', response);
-        res.json(response);
-
-      } catch (aiError) {
-        console.error('AI Generation Error:', aiError);
-        throw aiError;
+      // Jika pesan dari user adalah button option
+      if (['Normal', 'Berminyak', 'Kering'].includes(message)) {
+        chat.data.skinType = message.toLowerCase();
+        response = await chatSession.sendMessage(
+          `User memilih jenis kulit ${message}. Tanyakan masalah kulit utama mereka.`
+        );
+        chat.step = chatFlow.ASK_CONCERN;
+      } 
+      // Jika masalah kulit
+      else if (['Jerawat', 'Kulit Kusam', 'Kulit Kering', 'Tidak ada masalah khusus'].includes(message)) {
+        chat.data.concern = message;
+        response = await chatSession.sendMessage(
+          `User memiliki masalah ${message}. Tanyakan budget mereka untuk sunscreen.`
+        );
+        chat.step = chatFlow.ASK_BUDGET;
       }
+      // Jika budget
+      else if (['0-100rb', '100-200rb', 'Diatas 200rb'].includes(message)) {
+        const products = await getRecommendations(chat.data.skinType, chat.data.concern, message);
+        response = await chatSession.sendMessage(generateProductPrompt(chat.data, products));
+        chat.step = chatFlow.WELCOME;
+      }
+      // Untuk chat bebas dari user
+      else {
+        response = await chatSession.sendMessage(message || "Halo! Saya SkinBot, asisten skincare Anda.");
+      }
+
+      // Simpan pesan
+      chat.messages.push(
+        { type: 'user', content: message },
+        { type: 'bot', content: response.text() }
+      );
+
+      await chat.save();
+
+      // Format response
+      const responseObj = {
+        message: response.text(),
+        options: getOptionsForStep(chat.step)
+      };
+
+      // Tambahkan rekomendasi jika ada
+      if (products) {
+        responseObj.recommendations = {
+          sunscreen: formatProducts(products)
+        };
+      }
+
+      res.json(responseObj);
 
     } catch (error) {
-      console.error('Error in chat controller:', error);
-      res.status(500).json({ 
-        message: 'Maaf, terjadi kesalahan pada server. Silakan coba beberapa saat lagi.',
+      console.error('Error:', error);
+      res.status(500).json({
+        message: 'Maaf, terjadi kesalahan. Silakan coba lagi.',
         options: ["Mulai Konsultasi Baru"]
       });
     }
   }
 };
+
+// Helper functions
+const getOptionsForStep = (step) => {
+  switch (step) {
+    case chatFlow.ASK_SKIN_TYPE:
+      return ["Normal", "Berminyak", "Kering"];
+    case chatFlow.ASK_CONCERN:
+      return ["Jerawat", "Kulit Kusam", "Kulit Kering", "Tidak ada masalah khusus"];
+    case chatFlow.ASK_BUDGET:
+      return ["0-100rb", "100-200rb", "Diatas 200rb"];
+    default:
+      return [];
+  }
+};
+
+const getRecommendations = async (skinType, concern, budget) => {
+  const priceRange = {
+    '0-100rb': { $lt: 100000 },
+    '100-200rb': { $gte: 100000, $lte: 200000 },
+    'Diatas 200rb': { $gt: 200000 }
+  };
+
+  return await Product.find({
+    skinType,
+    ...(concern !== 'Tidak ada masalah khusus' && { concerns: concern.toLowerCase() }),
+    price: priceRange[budget]
+  });
+};
+
+const formatProducts = (products) => 
+  products.map(p => ({
+    name: p.name,
+    price: formatPrice(p.price),
+    description: p.description
+  }));
 
 module.exports = chatController;
