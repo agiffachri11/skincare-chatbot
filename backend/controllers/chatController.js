@@ -1,7 +1,7 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { Chat, Product } = require('../models');
 
-// Konfigurasi Gemini sesuai kode asli
+// Konfigurasi Gemini
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
 const generation_config = {
   temperature: 1,
@@ -28,12 +28,15 @@ const chatController = {
         chat = new Chat({ userId });
       }
 
-      const chatSession = model.startChat();
-      let responseText;
+      // Create chat session
+      const chatSession = model.startChat({
+        history: []
+      });
 
-      // Handle message
-      const result = await chatSession.sendMessage(message || "Halo! Perkenalkan saya sebagai asisten skincare.");
-      responseText = result.response.text;
+      // Send message to Gemini
+      const result = await chatSession.sendMessage(message || "Perkenalkan dirimu sebagai asisten skincare yang ramah dan berikan sapaan hangat.");
+      const responseText = await result.response.text();
+      console.log("Bot response:", responseText);
 
       // Save messages
       if (message) {
@@ -50,13 +53,14 @@ const chatController = {
 
       await chat.save();
 
+      // Send response
       res.json({
         message: responseText,
-        options: ["Normal", "Berminyak", "Kering"] // Default options
+        options: ["Normal", "Berminyak", "Kering"]
       });
 
     } catch (error) {
-      console.error('Error:', error);
+      console.error('Detailed error:', error);
       res.status(500).json({
         message: 'Maaf, terjadi kesalahan. Silakan coba lagi.',
         options: ["Mulai Konsultasi Baru"]
