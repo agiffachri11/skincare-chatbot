@@ -3,5 +3,5 @@ builder = "nixpacks"
 dockerfilePath = "./backend/Dockerfile"
 
 [deploy]
-startCommand = "cd backend && node index.js"
+startCommand = "node index.js"
 healthcheckPath = "/"

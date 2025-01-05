@@ -3,11 +3,13 @@ FROM node:18
 
 WORKDIR /app
 
-COPY package*.json ./
+# Copy package.json dari folder backend
+COPY backend/package*.json ./
 
 RUN npm install
 
-COPY . .
+# Copy seluruh konten folder backend
+COPY backend/ .
 
 EXPOSE 8080
 
