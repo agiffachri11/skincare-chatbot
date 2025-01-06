@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';  // Import hook useAuth
 
 const Register = () => {
   const [username, setUsername] = useState('');
@@ -7,6 +8,7 @@ const Register = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const { login } = useAuth();  // Ambil fungsi login dari context
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -25,7 +27,13 @@ const Register = () => {
 
       const data = await response.json();
       if (data.token) {
-        navigate('/login');
+        // Login otomatis setelah registrasi
+        const loginSuccess = await login(email, password);
+        if (loginSuccess) {
+          navigate('/home');  // Redirect ke home jika login berhasil
+        } else {
+          setError('Auto login failed. Please try logging in manually.');
+        }
       } else {
         setError(data.message || 'Registration failed');
       }

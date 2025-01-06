@@ -31,6 +31,7 @@ const authController = {
         { expiresIn: '24h' }
       );
 
+      // Return same response format as login
       res.status(201).json({
         message: 'Registrasi berhasil',
         token,
