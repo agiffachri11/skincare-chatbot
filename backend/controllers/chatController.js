@@ -46,8 +46,29 @@ const chatController = {
 
      const userMessage = message ? message.toLowerCase() : '';
 
+     // Jika tidak ada pesan (pertama kali buka chat)
+     if (!message) {
+       const welcomeMessage = `
+Hai! 👋 Selamat datang di SkinCare Assistant!
+
+Saya adalah chatbot khusus untuk membantu merekomendasikan sunscreen yang tepat untuk kulit Anda. Untuk mendapatkan rekomendasi yang sesuai, Anda perlu memberitahu:
+
+1. Jenis kulit Anda (normal/berminyak/kering)
+2. Masalah kulit yang ingin diatasi (jerawat/kusam/kering)
+
+Contoh cara bertanya:
+- "Rekomendasi sunscreen untuk kulit berminyak"
+- "Produk untuk kulit kering dan kusam"
+- "Sunscreen yang cocok untuk kulit berjerawat"
+
+Semua produk yang direkomendasikan dapat langsung dibeli melalui fitur pembelian kami! ✨
+
+Silakan mulai dengan menceritakan kondisi kulit Anda!`;
+
+       responseText = welcomeMessage;
+     }
      // Cek jika pesan tidak terkait dengan skincare/produk
-     if (!userMessage.includes('rekomendasi') && 
+     else if (!userMessage.includes('rekomendasi') && 
          !userMessage.includes('produk') && 
          !userMessage.includes('kulit') &&
          !userMessage.includes('sunscreen')) {
@@ -80,7 +101,13 @@ const chatController = {
        const limitedProducts = products.slice(0, 3);
 
        if (limitedProducts.length === 0) {
-         responseText = "Maaf, saya belum menemukan produk yang sesuai dengan kriteria Anda. Silakan berikan informasi lebih detail tentang jenis kulit (normal/berminyak/kering) dan masalah yang Anda hadapi (jerawat/kusam/kering).";
+         responseText = `Maaf, saya belum menemukan produk yang sesuai dengan kriteria Anda.
+
+Mohon berikan informasi yang lebih spesifik tentang:
+- Jenis kulit Anda (normal/berminyak/kering)
+- Masalah kulit yang ingin diatasi (jerawat/kusam/kering)
+
+Contoh: "Rekomendasi sunscreen untuk kulit berminyak berjerawat"`;
        } else {
          const productList = limitedProducts.map(p => 
            `${p.name} (${formatPrice(p.price)}):\n${p.description}`
@@ -92,10 +119,10 @@ const chatController = {
          const prompt = `Berikan rekomendasi sunscreen untuk ${skinType}${concerns} dari produk berikut:
          ${productList}
          
-         Jelaskan dengan gaya yang ramah dan informatif mengapa produk-produk tersebut cocok untuk kondisi kulit yang diminta. Tambahkan informasi bahwa produk dapat dibeli melalui fitur pembelian yang tersedia.`;
+         Jelaskan dengan gaya yang ramah dan informatif mengapa produk-produk tersebut cocok untuk kondisi kulit yang diminta. Tambahkan informasi bahwa produk dapat langsung dibeli melalui fitur pembelian.`;
 
          const result = await chatSession.sendMessage(prompt);
-         responseText = await result.response.text() + "\n\nAnda dapat membeli produk yang direkomendasikan melalui fitur pembelian kami.";
+         responseText = await result.response.text() + "\n\nSemua produk yang direkomendasikan dapat langsung Anda beli melalui fitur pembelian kami! 🛍️";
 
          recommendations = {
            sunscreen: limitedProducts.map(p => ({
