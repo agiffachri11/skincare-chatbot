@@ -4,7 +4,7 @@ const { Chat, Product } = require('../models');
 // Konfigurasi Gemini
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
 const generation_config = {
- temperature: 1, 
+ temperature: 1,
  topP: 0.95,
  topK: 40,
  maxOutputTokens: 8192,
@@ -13,7 +13,7 @@ const generation_config = {
 
 const model = genAI.getGenerativeModel({
  model: "gemini-1.5-pro",
- generation_config  
+ generation_config
 });
 
 // Helper function
@@ -44,38 +44,43 @@ const chatController = {
      let responseText;
      let recommendations = null;
 
-     // Cek jika pesan terkait permintaan rekomendasi
-     if (message && (message.toLowerCase().includes('rekomendasi') || message.toLowerCase().includes('produk'))) {
-       // Parse permintaan user untuk filter
-       const userRequest = message.toLowerCase();
+     const userMessage = message ? message.toLowerCase() : '';
+
+     // Cek jika pesan tidak terkait dengan skincare/produk
+     if (!userMessage.includes('rekomendasi') && 
+         !userMessage.includes('produk') && 
+         !userMessage.includes('kulit') &&
+         !userMessage.includes('sunscreen')) {
+       responseText = "Maaf, saya adalah chatbot yang khusus untuk membantu menganalisis kulit dan merekomendasikan produk sunscreen yang sesuai. Silakan tanyakan tentang rekomendasi produk atau konsultasikan kondisi kulit Anda.";
+     } 
+     // Proses rekomendasi produk
+     else {
        let queryParams = { category: 'sunscreen' };
 
        // Filter berdasarkan jenis kulit
-       if (userRequest.includes('kering')) {
+       if (userMessage.includes('kering')) {
          queryParams.skinType = 'kering';
-       } else if (userRequest.includes('berminyak')) {
+       } else if (userMessage.includes('berminyak')) {
          queryParams.skinType = 'berminyak';
-       } else if (userRequest.includes('normal')) {
+       } else if (userMessage.includes('normal')) {
          queryParams.skinType = 'normal';
        }
 
        // Filter berdasarkan concern
-       if (userRequest.includes('jerawat')) {
+       if (userMessage.includes('jerawat')) {
          queryParams.concerns = 'jerawat';
-       } else if (userRequest.includes('kusam')) {
+       } else if (userMessage.includes('kusam')) {
          queryParams.concerns = 'kusam';
-       } else if (userRequest.includes('kering') && !queryParams.skinType) {
+       } else if (userMessage.includes('kering') && !queryParams.skinType) {
          queryParams.concerns = 'kering';
        }
 
        // Ambil produk yang sesuai filter
        const products = await Product.find(queryParams);
-       
-       // Batasi jumlah rekomendasi
        const limitedProducts = products.slice(0, 3);
 
        if (limitedProducts.length === 0) {
-         responseText = "Maaf, saya tidak menemukan produk yang sesuai dengan kriteria Anda. Mohon coba kriteria lain atau tanyakan tentang jenis produk lainnya.";
+         responseText = "Maaf, saya belum menemukan produk yang sesuai dengan kriteria Anda. Silakan berikan informasi lebih detail tentang jenis kulit (normal/berminyak/kering) dan masalah yang Anda hadapi (jerawat/kusam/kering).";
        } else {
          const productList = limitedProducts.map(p => 
            `${p.name} (${formatPrice(p.price)}):\n${p.description}`
@@ -87,23 +92,20 @@ const chatController = {
          const prompt = `Berikan rekomendasi sunscreen untuk ${skinType}${concerns} dari produk berikut:
          ${productList}
          
-         Jelaskan dengan gaya yang ramah dan informatif mengapa produk-produk tersebut cocok untuk kondisi kulit yang diminta. Sertakan informasi tentang keunggulan setiap produk.`;
+         Jelaskan dengan gaya yang ramah dan informatif mengapa produk-produk tersebut cocok untuk kondisi kulit yang diminta. Tambahkan informasi bahwa produk dapat dibeli melalui fitur pembelian yang tersedia.`;
 
          const result = await chatSession.sendMessage(prompt);
-         responseText = await result.response.text();
+         responseText = await result.response.text() + "\n\nAnda dapat membeli produk yang direkomendasikan melalui fitur pembelian kami.";
 
          recommendations = {
            sunscreen: limitedProducts.map(p => ({
+             id: p._id,
              name: p.name,
              price: formatPrice(p.price),
              description: p.description
            }))
          };
        }
-     } else {
-       // Untuk pesan umum lainnya
-       const result = await chatSession.sendMessage(message || "Perkenalkan dirimu sebagai asisten skincare yang ramah dan berikan sapaan hangat.");
-       responseText = await result.response.text();
      }
 
      // Simpan pesan
@@ -142,5 +144,4 @@ const chatController = {
  }
 };
 
-// Export controller
 module.exports = chatController;
