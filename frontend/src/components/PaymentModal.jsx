@@ -57,35 +57,42 @@ const PaymentModal = ({ product, onClose }) => {
 
   const checkPaymentStatus = async () => {
     try {
-      setIsPending(true); 
-      console.log('Checking payment status for ID:', paymentInfo.paymentId);
+      setIsPending(true);
+      console.log('Checking payment for ID:', paymentInfo.paymentId);
+  
+      // 1. Cek ke endpoint Solstrafi
+      const solstrafiResponse = await fetch(`https://skincare-chatbot-production.up.railway.app/api/payment/check/${paymentInfo.paymentId}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       
-      const response = await fetch(`https://skincare-chatbot-production.up.railway.app/api/payment/check/${paymentInfo.paymentId}`, {
+      // 2. Tambahkan endpoint baru untuk cek transaksi di database
+      const transactionResponse = await fetch(`https://skincare-chatbot-production.up.railway.app/api/payment/transaction/${paymentInfo.paymentId}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
   
-      const data = await response.json();
-      console.log('Payment status response:', {
-        status: data.status,
-        isPaid: data.data?.isPaid,
-        fullData: data
+      const solstrafiData = await solstrafiResponse.json();
+      const transactionData = await transactionResponse.json();
+  
+      console.log('Payment status:', {
+        solstrafi: solstrafiData,
+        transaction: transactionData
       });
-      
-      if (data.data?.isPaid) {
+  
+      // Cek status dari kedua sumber
+      if (solstrafiData.data?.isPaid || transactionData.data?.status === 'completed') {
         setIsPending(false);
         setPaymentStatus('paid');
         showNotification('Pembayaran berhasil!', 'success');
-        // Tambah delay sebelum menutup modal
         setTimeout(() => onClose(), 3000);
-      } else {
-        setPaymentStatus('pending');
       }
     } catch (error) {
       console.error('Error checking payment status:', error);
-      showNotification('Gagal mengecek status pembayaran', 'error');
       setIsPending(false);
     }
   };
