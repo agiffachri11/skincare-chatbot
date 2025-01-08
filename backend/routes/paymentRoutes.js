@@ -76,7 +76,8 @@ router.post('/create-payment', protect, async (req, res) => {
         productName: product.name,
         originalPrice: `Rp ${product.price.toLocaleString('id-ID')}`,
         convertedAmount: `${solAmount} SOL`,
-        rate: `1 SOL = Rp ${SOL_TO_IDR.toLocaleString('id-ID')}`
+        rate: `1 SOL = Rp ${SOL_TO_IDR.toLocaleString('id-ID')}`,
+        solanaPayLink: `solana:${paymentData.data.walletAddress}` 
       }
     });
 
