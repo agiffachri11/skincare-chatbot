@@ -15,15 +15,25 @@ router.post('/create-payment', protect, async (req, res) => {
       return res.status(404).json({ message: 'Produk tidak ditemukan' });
     }
 
+    // Konversi harga dari Rupiah ke SOL (1 SOL = Rp 3.200.000)
+    const SOL_TO_IDR = 3200000; 
+    const solAmount = parseFloat((product.price / SOL_TO_IDR).toFixed(8));
+
+    console.log('Conversion details:', {
+      originalPrice: product.price,
+      solAmount,
+      rate: SOL_TO_IDR
+    });
+
     // Buat pembayaran di solstrafi
     const paymentResponse = await axios.post('https://api-staging.solstra.fi/service/pay/create', {
       currency,
-      amount: 0.00001, // Nilai minimum untuk testing
+      amount: solAmount,
       webhookURL: 'https://skincare-chatbot-production.up.railway.app/api/payment/webhook'
     }, {
       headers: {
         'Content-Type': 'application/json',
-        'X-Api-Key': '7c2e9f0c-3500-4b83-8798-8f7068c422e4'  // Gunakan X-Api-Key
+        'X-Api-Key': '7c2e9f0c-3500-4b83-8798-8f7068c422e4'
       }
     });
 
@@ -37,7 +47,7 @@ router.post('/create-payment', protect, async (req, res) => {
     const payment = new Payment({
       userId: req.user._id,
       productId: product._id,
-      amount: 0.00001,
+      amount: solAmount,
       currency,
       paymentId: paymentData.data.id,
       walletAddress: paymentData.data.walletAddress
@@ -50,7 +60,7 @@ router.post('/create-payment', protect, async (req, res) => {
       userId: req.user._id,
       productId: product._id,
       paymentId: paymentData.data.id,
-      amount: 0.00001,
+      amount: solAmount,
       currency,
       productName: product.name,
       buyerName: req.user.username,
@@ -64,7 +74,9 @@ router.post('/create-payment', protect, async (req, res) => {
       data: {
         ...paymentData.data,
         productName: product.name,
-        originalPrice: product.price
+        originalPrice: `Rp ${product.price.toLocaleString('id-ID')}`,
+        convertedAmount: `${solAmount} SOL`,
+        rate: `1 SOL = Rp ${SOL_TO_IDR.toLocaleString('id-ID')}`
       }
     });
 
