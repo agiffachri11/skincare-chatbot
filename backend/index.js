@@ -4,6 +4,7 @@ const cors = require('cors');
 const connectDB = require('./config/db');
 const authRoutes = require('./routes/authRoutes');  
 const chatRoutes = require('./routes/chatRoutes');  
+const paymentRoutes = require('./routes/paymentRoutes');
 
 // Log untuk debug
 console.log('Starting server...');
@@ -20,7 +21,8 @@ app.use(express.json());
 
 // Routes
 app.use('/api/auth', authRoutes);  
-app.use('/api', chatRoutes);     
+app.use('/api', chatRoutes);  
+app.use('/api/payment', paymentRoutes);   
 
 // Test route
 app.get('/', (req, res) => {
