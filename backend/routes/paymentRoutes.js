@@ -20,19 +20,24 @@ router.post('/create-payment', protect, async (req, res) => {
       currency,
       amount: 0.00001, // Nilai minimum untuk testing
       webhookURL: 'https://skincare-chatbot-production.up.railway.app/api/payment/webhook'
+    }, {
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Api-Key': '7c2e9f0c-3500-4b83-8798-8f7068c422e4'  // Gunakan X-Api-Key
+      }
     });
 
     const paymentData = paymentResponse.data;
     
     if (paymentData.status !== 'success') {
-      throw new Error('Failed to create payment');
+      throw new Error(paymentData.message || 'Failed to create payment');
     }
 
     // Simpan data pembayaran ke database
     const payment = new Payment({
       userId: req.user._id,
       productId: product._id,
-      amount: 0.00001, // Sesuaikan dengan amount di atas
+      amount: 0.00001,
       currency,
       paymentId: paymentData.data.id,
       walletAddress: paymentData.data.walletAddress
@@ -45,7 +50,7 @@ router.post('/create-payment', protect, async (req, res) => {
       userId: req.user._id,
       productId: product._id,
       paymentId: paymentData.data.id,
-      amount: 0.00001, // Sesuaikan dengan amount di atas
+      amount: 0.00001,
       currency,
       productName: product.name,
       buyerName: req.user.username,
@@ -77,9 +82,12 @@ router.get('/check/:paymentId', protect, async (req, res) => {
   try {
     const { paymentId } = req.params;
 
-    const checkResponse = await axios.post(`https://api-staging.solstra.fi/service/pay/${paymentId}/check`);
+    const checkResponse = await axios.post(`https://api-staging.solstra.fi/service/pay/${paymentId}/check`, {}, {
+      headers: {
+        'X-Api-Key': '7c2e9f0c-3500-4b83-8798-8f7068c422e4'  // Gunakan X-Api-Key
+      }
+    });
     
-    // Kirim response sesuai format dari API Solstrafi
     res.json(checkResponse.data);
 
   } catch (error) {
