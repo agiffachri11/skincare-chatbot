@@ -12,6 +12,7 @@ const PaymentModal = ({ product, onClose }) => {
   const [error, setError] = useState(null);
   const [notification, setNotification] = useState(null);
   const [timeLeft, setTimeLeft] = useState(300); // 5 menit dalam detik
+  const [isPending, setIsPending] = useState(false);
 
   const showNotification = (message, type) => {
     setNotification({ message, type });
@@ -56,24 +57,36 @@ const PaymentModal = ({ product, onClose }) => {
 
   const checkPaymentStatus = async () => {
     try {
+      setIsPending(true); 
+      console.log('Checking payment status for ID:', paymentInfo.paymentId);
+      
       const response = await fetch(`https://skincare-chatbot-production.up.railway.app/api/payment/check/${paymentInfo.paymentId}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
-
+  
       const data = await response.json();
-      console.log('Payment status:', data);
+      console.log('Payment status response:', {
+        status: data.status,
+        isPaid: data.data?.isPaid,
+        fullData: data
+      });
       
       if (data.data?.isPaid) {
+        setIsPending(false);
         setPaymentStatus('paid');
         showNotification('Pembayaran berhasil!', 'success');
-        setTimeout(() => onClose(), 2000); // Tutup modal setelah 2 detik
+        // Tambah delay sebelum menutup modal
+        setTimeout(() => onClose(), 3000);
+      } else {
+        setPaymentStatus('pending');
       }
     } catch (error) {
       console.error('Error checking payment status:', error);
       showNotification('Gagal mengecek status pembayaran', 'error');
+      setIsPending(false);
     }
   };
 
@@ -249,6 +262,13 @@ const PaymentModal = ({ product, onClose }) => {
                 <p className="text-gray-400 text-xs">
                   Rate: {paymentInfo.rate}
                 </p>
+              )}
+              {isPending && (
+                <div className="mt-4 text-center">
+                  <p className="text-yellow-400">
+                    Menunggu konfirmasi pembayaran...
+                  </p>
+                </div>
               )}
             </div>
           ) : (
