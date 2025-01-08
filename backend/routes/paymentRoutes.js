@@ -94,12 +94,15 @@ router.post('/create-payment', protect, async (req, res) => {
 router.get('/check/:paymentId', protect, async (req, res) => {
   try {
     const { paymentId } = req.params;
+    console.log('Checking payment status for:', paymentId);
 
     const checkResponse = await axios.post(`https://api-staging.solstra.fi/service/pay/${paymentId}/check`, {}, {
       headers: {
-        'X-Api-Key': '7c2e9f0c-3500-4b83-8798-8f7068c422e4'  // Gunakan X-Api-Key
+        'X-Api-Key': '7c2e9f0c-3500-4b83-8798-8f7068c422e4'
       }
     });
+
+    console.log('Solstrafi response:', checkResponse.data);
     
     res.json(checkResponse.data);
 
@@ -109,25 +112,15 @@ router.get('/check/:paymentId', protect, async (req, res) => {
   }
 });
 
-// Endpoint untuk webhook (callback dari solstrafi)
 router.post('/webhook', async (req, res) => {
   try {
-    const { paymentId, status } = req.body;
-
-    const payment = await Payment.findOne({ paymentId });
-    if (!payment) {
-      return res.status(404).json({ message: 'Payment not found' });
-    }
-
-    // Update payment status
-    payment.status = status === 'paid' ? 'paid' : 'failed';
-    await payment.save();
+    const { paymentID } = req.body;
 
     // Update transaction status
     await Transaction.findOneAndUpdate(
-      { paymentId },
+      { paymentID },
       {
-        status: status === 'paid' ? 'completed' : 'failed',
+        status: 'completed',
         updatedAt: new Date()
       }
     );
@@ -135,7 +128,7 @@ router.post('/webhook', async (req, res) => {
     res.json({ 
       received: true,
       status: 'success',
-      message: status === 'paid' ? 'Payment processed successfully' : 'Payment failed'
+      message: 'Payment processed successfully'
     });
 
   } catch (error) {
