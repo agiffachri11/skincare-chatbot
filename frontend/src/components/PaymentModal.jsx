@@ -49,7 +49,7 @@ const PaymentModal = ({ product, onClose }) => {
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          productId: product.id,
+          productId: product._id || product.id, 
           currency: 'SOL'
         })
       });
