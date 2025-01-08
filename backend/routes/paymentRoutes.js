@@ -49,7 +49,7 @@ router.post('/create-payment', protect, async (req, res) => {
       productId: product._id,
       amount: solAmount,
       currency,
-      paymentId: paymentData.data.id,
+      paymentID: paymentData.data.id,
       walletAddress: paymentData.data.walletAddress
     });
 
@@ -59,7 +59,7 @@ router.post('/create-payment', protect, async (req, res) => {
     const transaction = new Transaction({
       userId: req.user._id,
       productId: product._id,
-      paymentId: paymentData.data.id,
+      paymentID: paymentData.data.id,
       amount: solAmount,
       currency,
       productName: product.name,
@@ -91,12 +91,12 @@ router.post('/create-payment', protect, async (req, res) => {
 });
 
 // Endpoint untuk mengecek status pembayaran
-router.get('/check/:paymentId', protect, async (req, res) => {
+router.get('/check/:paymentID', protect, async (req, res) => {
   try {
-    const { paymentId } = req.params;
-    console.log('Checking payment status for:', paymentId);
+    const { paymentID } = req.params;
+    console.log('Checking payment status for:', paymentID);
 
-    const checkResponse = await axios.post(`https://api-staging.solstra.fi/service/pay/${paymentId}/check`, {}, {
+    const checkResponse = await axios.post(`https://api-staging.solstra.fi/service/pay/${paymentID}/check`, {}, {
       headers: {
         'X-Api-Key': '7c2e9f0c-3500-4b83-8798-8f7068c422e4'
       }
@@ -165,16 +165,16 @@ router.get('/transactions', protect, async (req, res) => {
 });
 
 // Endpoint untuk cek status transaksi berdasarkan paymentId
-router.get('/transaction/:paymentId', protect, async (req, res) => {
+router.get('/transaction/:paymentID', protect, async (req, res) => {
   try {
-    const { paymentId } = req.params;
-    console.log('Checking transaction status for paymentId:', paymentId);
+    const { paymentID } = req.params;
+    console.log('Checking transaction status for paymentID:', paymentID);
     
-    const transaction = await Transaction.findOne({ paymentId });
+    const transaction = await Transaction.findOne({ paymentID });
     console.log('Transaction found:', transaction);
 
     // Juga cek payment
-    const payment = await Payment.findOne({ paymentId });
+    const payment = await Payment.findOne({ paymentID });
     console.log('Payment found:', payment);
 
     if (!transaction) {

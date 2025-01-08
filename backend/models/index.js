@@ -108,7 +108,7 @@ const paymentSchema = new mongoose.Schema({
     enum: ['pending', 'paid', 'failed'],
     default: 'pending'
   },
-  paymentId: String,
+  paymentID: String,
   walletAddress: String,
   createdAt: { 
     type: Date, 
@@ -129,7 +129,7 @@ const transactionSchema = mongoose.Schema({
     required: true,
     ref: 'Product'
   },
-  paymentId: {
+  paymentID: {
     type: String,
     required: true
   },

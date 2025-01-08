@@ -41,7 +41,7 @@ const PaymentModal = ({ product, onClose }) => {
   // Payment status check
   useEffect(() => {
     let intervalId;
-    if (paymentInfo?.paymentId) {
+    if (paymentInfo?.paymentID) {
       intervalId = setInterval(checkPaymentStatus, 5000); // Cek setiap 5 detik
     }
     return () => {
@@ -57,13 +57,13 @@ const PaymentModal = ({ product, onClose }) => {
 
   const checkPaymentStatus = async () => {
     try {
-      if (!paymentInfo?.paymentId) return;
+      if (!paymentInfo?.paymentID) return;
       
-      console.log('Checking transaction status for:', paymentInfo.paymentId);
+      console.log('Checking transaction status for:', paymentInfo.paymentID);
       setIsPending(true);
   
       const response = await fetch(
-        `https://skincare-chatbot-production.up.railway.app/api/payment/transaction/${paymentInfo.paymentId}`,
+        `https://skincare-chatbot-production.up.railway.app/api/payment/transaction/${paymentInfo.paymentID}`,
         {
           headers: {
             'Authorization': `Bearer ${token}`
@@ -100,7 +100,7 @@ const PaymentModal = ({ product, onClose }) => {
   useEffect(() => {
     let intervalId;
     
-    if (paymentInfo?.paymentId && !paymentStatus) {
+    if (paymentInfo?.paymentID && !paymentStatus) {
       intervalId = setInterval(async () => {
         const isCompleted = await checkPaymentStatus();
         if (isCompleted) {
@@ -158,7 +158,7 @@ const PaymentModal = ({ product, onClose }) => {
       return;
     }
 
-    if (paymentInfo?.paymentId && !paymentStatus) {
+    if (paymentInfo?.paymentID && !paymentStatus) {
       const confirm = window.confirm('Menutup jendela ini akan membatalkan pembayaran. Lanjutkan?');
       if (!confirm) return;
     }
