@@ -1,34 +1,32 @@
 const express = require('express');
 const router = express.Router();
+const axios = require('axios');
 const { Product, Payment, User, Transaction } = require('../models');
 const { protect } = require('../middleware/auth');
 
 // Endpoint untuk membuat pembayaran baru
 router.post('/create-payment', protect, async (req, res) => {
- try {
-   const { productId, currency = 'SOL' } = req.body;
-   
-   // Ambil detail produk
-   const product = await Product.findById(productId);
-   if (!product) {
-     return res.status(404).json({ message: 'Produk tidak ditemukan' });
-   }
+  try {
+    const { productId, currency = 'SOL' } = req.body;
+    
+    // Ambil detail produk
+    const product = await Product.findById(productId);
+    if (!product) {
+      return res.status(404).json({ message: 'Produk tidak ditemukan' });
+    }
 
    // Buat pembayaran di solstrafi
-   const paymentResponse = await fetch('https://api-staging.solstra.fi/service/pay/create', {
-     method: 'POST',
+   const paymentResponse = await axios.post('https://api-staging.solstra.fi/service/pay/create', {
+     currency,
+     amount: product.price,
+     webhookURL: 'https://skincare-chatbot-production.up.railway.app/api/payment/webhook'
+   }, {
      headers: {
-       'Content-Type': 'application/json',
        'Authorization': 'Bearer 7c2e9f0c-3500-4b83-8798-8f7068c422e4'
-     },
-     body: JSON.stringify({
-       currency,
-       amount: product.price,
-       webhookURL: 'https://skincare-chatbot-production.up.railway.app/api/payment/webhook' 
-     })
+     }
    });
 
-   const paymentData = await paymentResponse.json();
+   const paymentData = paymentResponse.data;
 
    // Simpan data pembayaran ke database
    const payment = new Payment({
@@ -76,17 +74,13 @@ router.get('/check/:paymentId', protect, async (req, res) => {
  try {
    const { paymentId } = req.params;
 
-   const checkResponse = await fetch(`https://api-staging.solstra.fi/service/pay/${paymentId}/check`, {
-     method: 'POST',
+   const checkResponse = await axios.post(`https://api-staging.solstra.fi/service/pay/${paymentId}/check`, {}, {
      headers: {
-       'Content-Type': 'application/json',
        'Authorization': 'Bearer API_KEY_SOLSTRAFI'
      }
    });
 
-   const checkData = await checkResponse.json();
-   res.json(checkData);
-
+   res.json(checkResponse.data);
  } catch (error) {
    console.error('Payment check error:', error);
    res.status(500).json({ message: 'Gagal mengecek status pembayaran' });
