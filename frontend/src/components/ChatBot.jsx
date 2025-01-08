@@ -72,6 +72,7 @@ const ChatBot = () => {
 
  // Handle pembayaran produk
  const handleBuyProduct = (product) => {
+  console.log('Product being purchased:', product);
   setSelectedProduct(product);
   setShowPaymentModal(true);
   showNotification('Memproses pembayaran...', 'info');
@@ -105,6 +106,7 @@ const ChatBot = () => {
      const data = await response.json();
      
      if (data.message) {
+      console.log('Recommendations received:', data.recommendations);
        setMessages([...newMessages, {
          type: 'bot',
          content: data.message,

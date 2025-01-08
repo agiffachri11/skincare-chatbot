@@ -41,29 +41,42 @@ const PaymentModal = ({ product, onClose }) => {
     try {
       setIsLoading(true);
       setError(null);
-
+  
+      // Log product data
+      console.log('Product data:', {
+        id: product.id,
+        _id: product._id,
+        fullProduct: product
+      });
+  
+      const payloadData = {
+        productId: product._id || product.id,
+        currency: 'SOL'
+      };
+      console.log('Payload:', payloadData);
+  
       const response = await fetch('https://skincare-chatbot-production.up.railway.app/api/payment/create-payment', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({
-          productId: product._id || product.id, 
-          currency: 'SOL'
-        })
+        body: JSON.stringify(payloadData)
       });
-
+  
+      // Log response details
+      console.log('Response status:', response.status);
       const data = await response.json();
-      
+      console.log('Response data:', data);
+  
       if (data.status === 'success') {
         setPaymentInfo(data.data);
       } else {
         setError(data.message || 'Terjadi kesalahan saat membuat pembayaran');
       }
     } catch (error) {
+      console.error('Detailed payment error:', error);
       setError('Terjadi kesalahan. Silakan coba lagi.');
-      console.error('Payment error:', error);
     } finally {
       setIsLoading(false);
     }
