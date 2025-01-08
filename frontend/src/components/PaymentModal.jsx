@@ -151,6 +151,7 @@ const PaymentModal = ({ product, onClose }) => {
               
               {/* QR Code */}
               <div className="flex flex-col items-center bg-white p-4 rounded-lg">
+                {console.log('Payment Info:', paymentInfo)}
                 {paymentInfo.solanaPayLink ? (
                   <>
                     <QRCodeSVG  
@@ -164,7 +165,9 @@ const PaymentModal = ({ product, onClose }) => {
                     </p>
                   </>
                 ) : (
-                  <p className="text-gray-600">QR Code tidak tersedia</p>
+                  <p className="text-gray-600">
+      {`Debug: ${JSON.stringify(paymentInfo, null, 2)}`} {/* Tambahkan ini */}
+    </p>
                 )}
               </div>
 
