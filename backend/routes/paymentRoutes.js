@@ -154,6 +154,31 @@ router.get('/transactions', protect, async (req, res) => {
   }
 });
 
+// Endpoint untuk cek status transaksi berdasarkan paymentId
+router.get('/transaction/:paymentId', protect, async (req, res) => {
+  try {
+    const { paymentId } = req.params;
+    
+    const transaction = await Transaction.findOne({ paymentId });
+    
+    if (!transaction) {
+      return res.status(404).json({ 
+        status: 'error',
+        message: 'Transaksi tidak ditemukan' 
+      });
+    }
+
+    res.json({
+      status: 'success',
+      data: transaction
+    });
+
+  } catch (error) {
+    console.error('Transaction check error:', error);
+    res.status(500).json({ message: 'Gagal mengecek status transaksi' });
+  }
+});
+
 // Endpoint untuk mendapatkan detail transaksi
 router.get('/transaction/:transactionId', protect, async (req, res) => {
   try {
