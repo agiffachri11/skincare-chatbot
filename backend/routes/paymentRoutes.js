@@ -15,177 +15,152 @@ router.post('/create-payment', protect, async (req, res) => {
       return res.status(404).json({ message: 'Produk tidak ditemukan' });
     }
 
-   // Buat pembayaran di solstrafi
-   const paymentResponse = await axios.post('https://api-staging.solstra.fi/service/pay/create', {
-     currency,
-     amount: product.price,
-     webhookURL: 'https://skincare-chatbot-production.up.railway.app/api/payment/webhook'
-   }, {
-     headers: {
-       'Authorization': 'Bearer 7c2e9f0c-3500-4b83-8798-8f7068c422e4'
-     }
-   });
+    // Buat pembayaran di solstrafi
+    const paymentResponse = await axios.post('https://api-staging.solstra.fi/service/pay/create', {
+      currency,
+      amount: 0.00001, // Nilai minimum untuk testing
+      webhookURL: 'https://skincare-chatbot-production.up.railway.app/api/payment/webhook'
+    });
 
-   const paymentData = paymentResponse.data;
+    const paymentData = paymentResponse.data;
+    
+    if (paymentData.status !== 'success') {
+      throw new Error('Failed to create payment');
+    }
 
-   // Simpan data pembayaran ke database
-   const payment = new Payment({
-     userId: req.user._id,
-     productId: product._id,
-     amount: product.price,
-     currency,
-     paymentId: paymentData.data.id,
-     walletAddress: paymentData.data.walletAddress
-   });
+    // Simpan data pembayaran ke database
+    const payment = new Payment({
+      userId: req.user._id,
+      productId: product._id,
+      amount: 0.00001, // Sesuaikan dengan amount di atas
+      currency,
+      paymentId: paymentData.data.id,
+      walletAddress: paymentData.data.walletAddress
+    });
 
-   await payment.save();
+    await payment.save();
 
-   // Buat transaksi awal dengan status pending
-   const transaction = new Transaction({
-     userId: req.user._id,
-     productId: product._id,
-     paymentId: paymentData.data.id,
-     amount: product.price,
-     currency,
-     productName: product.name,
-     buyerName: req.user.username,
-     status: 'pending'
-   });
+    // Buat transaksi awal dengan status pending
+    const transaction = new Transaction({
+      userId: req.user._id,
+      productId: product._id,
+      paymentId: paymentData.data.id,
+      amount: 0.00001, // Sesuaikan dengan amount di atas
+      currency,
+      productName: product.name,
+      buyerName: req.user.username,
+      status: 'pending'
+    });
 
-   await transaction.save();
+    await transaction.save();
 
-   res.json({
-     status: 'success',
-     data: {
-       ...paymentData.data,
-       productName: product.name,
-       productPrice: product.price
-     }
-   });
+    res.json({
+      status: 'success',
+      data: {
+        ...paymentData.data,
+        productName: product.name,
+        originalPrice: product.price
+      }
+    });
 
- } catch (error) {
-   console.error('Payment error:', error);
-   res.status(500).json({ message: 'Terjadi kesalahan dalam pembuatan pembayaran' });
- }
+  } catch (error) {
+    console.error('Payment error:', error.response?.data || error);
+    res.status(500).json({ 
+      message: 'Terjadi kesalahan dalam pembuatan pembayaran',
+      details: error.response?.data || error.message 
+    });
+  }
 });
 
 // Endpoint untuk mengecek status pembayaran
 router.get('/check/:paymentId', protect, async (req, res) => {
- try {
-   const { paymentId } = req.params;
+  try {
+    const { paymentId } = req.params;
 
-   const checkResponse = await axios.post(`https://api-staging.solstra.fi/service/pay/${paymentId}/check`, {}, {
-     headers: {
-       'Authorization': 'Bearer API_KEY_SOLSTRAFI'
-     }
-   });
+    const checkResponse = await axios.post(`https://api-staging.solstra.fi/service/pay/${paymentId}/check`);
+    
+    // Kirim response sesuai format dari API Solstrafi
+    res.json(checkResponse.data);
 
-   res.json(checkResponse.data);
- } catch (error) {
-   console.error('Payment check error:', error);
-   res.status(500).json({ message: 'Gagal mengecek status pembayaran' });
- }
+  } catch (error) {
+    console.error('Payment check error:', error.response?.data || error);
+    res.status(500).json({ message: 'Gagal mengecek status pembayaran' });
+  }
 });
 
 // Endpoint untuk webhook (callback dari solstrafi)
 router.post('/webhook', async (req, res) => {
- try {
-   const { paymentId, status } = req.body;
+  try {
+    const { paymentId, status } = req.body;
 
-   const payment = await Payment.findOne({ paymentId });
-   if (payment) {
-     payment.status = status === 'paid' ? 'paid' : 'failed';
-     await payment.save();
+    const payment = await Payment.findOne({ paymentId });
+    if (!payment) {
+      return res.status(404).json({ message: 'Payment not found' });
+    }
 
-     if (status === 'paid') {
-       // Update status pembayaran
-       await Payment.findOneAndUpdate(
-         { paymentId },
-         { 
-           status: 'paid',
-           updatedAt: new Date()
-         }
-       );
+    // Update payment status
+    payment.status = status === 'paid' ? 'paid' : 'failed';
+    await payment.save();
 
-       // Update status transaksi
-       await Transaction.findOneAndUpdate(
-         { paymentId },
-         {
-           status: 'completed',
-           updatedAt: new Date()
-         }
-       );
+    // Update transaction status
+    await Transaction.findOneAndUpdate(
+      { paymentId },
+      {
+        status: status === 'paid' ? 'completed' : 'failed',
+        updatedAt: new Date()
+      }
+    );
 
-       console.log(`Payment ${paymentId} has been processed successfully`);
-       
-       res.json({ 
-         received: true,
-         status: 'success',
-         message: 'Payment processed successfully'
-       });
-     } else {
-       // Update status transaksi menjadi failed
-       await Transaction.findOneAndUpdate(
-         { paymentId },
-         {
-           status: 'failed',
-           updatedAt: new Date()
-         }
-       );
+    res.json({ 
+      received: true,
+      status: 'success',
+      message: status === 'paid' ? 'Payment processed successfully' : 'Payment failed'
+    });
 
-       res.json({
-         received: true,
-         status: 'failed',
-         message: 'Payment failed'
-       });
-     }
-   } else {
-     res.status(404).json({ message: 'Payment not found' });
-   }
- } catch (error) {
-   console.error('Webhook error:', error);
-   res.status(500).json({ message: 'Error processing webhook' });
- }
+  } catch (error) {
+    console.error('Webhook error:', error);
+    res.status(500).json({ message: 'Error processing webhook' });
+  }
 });
 
 // Endpoint untuk mendapatkan history transaksi user
 router.get('/transactions', protect, async (req, res) => {
- try {
-   const transactions = await Transaction.find({ userId: req.user._id })
-     .sort({ createdAt: -1 }); // Urutkan dari yang terbaru
+  try {
+    const transactions = await Transaction.find({ userId: req.user._id })
+      .sort({ createdAt: -1 });
 
-   res.json({
-     status: 'success',
-     data: transactions
-   });
+    res.json({
+      status: 'success',
+      data: transactions
+    });
 
- } catch (error) {
-   console.error('Transaction history error:', error);
-   res.status(500).json({ message: 'Gagal mengambil history transaksi' });
- }
+  } catch (error) {
+    console.error('Transaction history error:', error);
+    res.status(500).json({ message: 'Gagal mengambil history transaksi' });
+  }
 });
 
 // Endpoint untuk mendapatkan detail transaksi
 router.get('/transaction/:transactionId', protect, async (req, res) => {
- try {
-   const transaction = await Transaction.findOne({
-     _id: req.params.transactionId,
-     userId: req.user._id
-   });
+  try {
+    const transaction = await Transaction.findOne({
+      _id: req.params.transactionId,
+      userId: req.user._id
+    });
 
-   if (!transaction) {
-     return res.status(404).json({ message: 'Transaksi tidak ditemukan' });
-   }
+    if (!transaction) {
+      return res.status(404).json({ message: 'Transaksi tidak ditemukan' });
+    }
 
-   res.json({
-     status: 'success',
-     data: transaction
-   });
+    res.json({
+      status: 'success',
+      data: transaction
+    });
 
- } catch (error) {
-   console.error('Transaction detail error:', error);
-   res.status(500).json({ message: 'Gagal mengambil detail transaksi' });
- }
+  } catch (error) {
+    console.error('Transaction detail error:', error);
+    res.status(500).json({ message: 'Gagal mengambil detail transaksi' });
+  }
 });
 
 module.exports = router;
