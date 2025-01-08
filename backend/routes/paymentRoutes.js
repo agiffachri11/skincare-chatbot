@@ -112,9 +112,19 @@ router.get('/check/:paymentId', protect, async (req, res) => {
   }
 });
 
+// Endpoint untuk webhook (callback dari solstrafi)
 router.post('/webhook', async (req, res) => {
   try {
     const { paymentID } = req.body;
+
+    if (!paymentID) {
+      return res.status(400).json({ message: 'paymentID required' });
+   }
+
+    const payment = await Payment.findOne({ paymentID });
+    if (!payment) {
+      return res.status(404).json({ message: 'Payment not found' });
+    }
 
     // Update transaction status
     await Transaction.findOneAndUpdate(
@@ -158,24 +168,37 @@ router.get('/transactions', protect, async (req, res) => {
 router.get('/transaction/:paymentId', protect, async (req, res) => {
   try {
     const { paymentId } = req.params;
+    console.log('Checking transaction status for paymentId:', paymentId);
     
     const transaction = await Transaction.findOne({ paymentId });
-    
+    console.log('Transaction found:', transaction);
+
+    // Juga cek payment
+    const payment = await Payment.findOne({ paymentId });
+    console.log('Payment found:', payment);
+
     if (!transaction) {
       return res.status(404).json({ 
-        status: 'error',
+        success: false,
         message: 'Transaksi tidak ditemukan' 
       });
     }
 
     res.json({
-      status: 'success',
-      data: transaction
+      success: true,
+      data: {
+        transactionStatus: transaction.status,
+        paymentStatus: payment?.status,
+        updatedAt: transaction.updatedAt
+      }
     });
 
   } catch (error) {
     console.error('Transaction check error:', error);
-    res.status(500).json({ message: 'Gagal mengecek status transaksi' });
+    res.status(500).json({ 
+      success: false, 
+      message: 'Gagal mengecek status transaksi' 
+    });
   }
 });
 

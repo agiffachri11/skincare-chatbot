@@ -57,45 +57,62 @@ const PaymentModal = ({ product, onClose }) => {
 
   const checkPaymentStatus = async () => {
     try {
-      setIsPending(true);
-      console.log('Checking payment for ID:', paymentInfo.paymentId);
-  
-      // 1. Cek ke endpoint Solstrafi
-      const solstrafiResponse = await fetch(`https://skincare-chatbot-production.up.railway.app/api/payment/check/${paymentInfo.paymentId}`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      if (!paymentInfo?.paymentId) return;
       
-      // 2. Tambahkan endpoint baru untuk cek transaksi di database
-      const transactionResponse = await fetch(`https://skincare-chatbot-production.up.railway.app/api/payment/transaction/${paymentInfo.paymentId}`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`
+      console.log('Checking transaction status for:', paymentInfo.paymentId);
+      setIsPending(true);
+  
+      const response = await fetch(
+        `https://skincare-chatbot-production.up.railway.app/api/payment/transaction/${paymentInfo.paymentId}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
         }
-      });
+      );
   
-      const solstrafiData = await solstrafiResponse.json();
-      const transactionData = await transactionResponse.json();
+      const data = await response.json();
+      console.log('Transaction status response:', data);
   
-      console.log('Payment status:', {
-        solstrafi: solstrafiData,
-        transaction: transactionData
-      });
-  
-      // Cek status dari kedua sumber
-      if (solstrafiData.data?.isPaid || transactionData.data?.status === 'completed') {
-        setIsPending(false);
+      if (data.success && 
+         (data.data.transactionStatus === 'completed' || 
+          data.data.paymentStatus === 'paid')) {
         setPaymentStatus('paid');
+        setIsPending(false);
         showNotification('Pembayaran berhasil!', 'success');
-        setTimeout(() => onClose(), 3000);
+        // Tambah delay sebelum menutup
+        setTimeout(() => {
+          showNotification('Transaksi selesai!', 'success');
+          onClose();
+        }, 2000);
+        return true; // Pembayaran selesai
       }
+  
+      return false; // Pembayaran belum selesai
     } catch (error) {
-      console.error('Error checking payment status:', error);
+      console.error('Error checking transaction status:', error);
       setIsPending(false);
+      return false;
     }
   };
+  
+  // Polling lebih agresif saat menunggu pembayaran
+  useEffect(() => {
+    let intervalId;
+    
+    if (paymentInfo?.paymentId && !paymentStatus) {
+      intervalId = setInterval(async () => {
+        const isCompleted = await checkPaymentStatus();
+        if (isCompleted) {
+          clearInterval(intervalId);
+        }
+      }, 3000); // Cek setiap 3 detik
+    }
+  
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [paymentInfo, paymentStatus]);
 
   const handlePayment = async () => {
     try {
