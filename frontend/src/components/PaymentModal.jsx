@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
+import { X } from 'lucide-react';
 import Notification from './Notification';
 import { useAuth } from '../context/AuthContext';
 
@@ -10,21 +11,48 @@ const PaymentModal = ({ product, onClose }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [notification, setNotification] = useState(null);
+  const [timeLeft, setTimeLeft] = useState(300); // 5 menit dalam detik
 
   const showNotification = (message, type) => {
     setNotification({ message, type });
     setTimeout(() => setNotification(null), 3000);
   };
 
+  // Timer countdown
+  useEffect(() => {
+    if (!paymentInfo) return;
+
+    const timer = setInterval(() => {
+      setTimeLeft((prevTime) => {
+        if (prevTime <= 1) {
+          clearInterval(timer);
+          showNotification('Waktu pembayaran habis', 'error');
+          onClose();
+          return 0;
+        }
+        return prevTime - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [paymentInfo]);
+
+  // Payment status check
   useEffect(() => {
     let intervalId;
     if (paymentInfo?.paymentId) {
-      intervalId = setInterval(checkPaymentStatus, 10000);
+      intervalId = setInterval(checkPaymentStatus, 5000); // Cek setiap 5 detik
     }
     return () => {
       if (intervalId) clearInterval(intervalId);
     };
   }, [paymentInfo]);
+
+  const formatTimeLeft = () => {
+    const minutes = Math.floor(timeLeft / 60);
+    const seconds = timeLeft % 60;
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  };
 
   const checkPaymentStatus = async () => {
     try {
@@ -41,7 +69,7 @@ const PaymentModal = ({ product, onClose }) => {
       if (data.data?.isPaid) {
         setPaymentStatus('paid');
         showNotification('Pembayaran berhasil!', 'success');
-        onClose();
+        setTimeout(() => onClose(), 2000); // Tutup modal setelah 2 detik
       }
     } catch (error) {
       console.error('Error checking payment status:', error);
@@ -53,8 +81,7 @@ const PaymentModal = ({ product, onClose }) => {
     try {
       setIsLoading(true);
       setError(null);
-
-      console.log('Creating payment for product:', product);
+      setTimeLeft(300); // Reset timer ke 5 menit
 
       const payloadData = {
         productId: product.id,
@@ -88,6 +115,19 @@ const PaymentModal = ({ product, onClose }) => {
     }
   };
 
+  const handleClose = async () => {
+    if (paymentStatus === 'paid') {
+      onClose();
+      return;
+    }
+
+    if (paymentInfo?.paymentId && !paymentStatus) {
+      const confirm = window.confirm('Menutup jendela ini akan membatalkan pembayaran. Lanjutkan?');
+      if (!confirm) return;
+    }
+    onClose();
+  };
+
   return (
     <>
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -95,12 +135,21 @@ const PaymentModal = ({ product, onClose }) => {
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-bold text-white">Pembayaran</h2>
             <button 
-              onClick={onClose}
+              onClick={handleClose}
               className="text-gray-400 hover:text-white"
             >
-              ✕
+              <X size={24} />
             </button>
           </div>
+
+          {/* Timer */}
+          {paymentInfo && timeLeft > 0 && !paymentStatus && (
+            <div className="mb-4 text-center">
+              <p className={`text-sm ${timeLeft < 60 ? 'text-red-400' : 'text-yellow-400'}`}>
+                Wallet akan kadaluarsa dalam: {formatTimeLeft()}
+              </p>
+            </div>
+          )}
 
           {error && (
             <div className="bg-red-500/20 text-red-300 p-3 rounded mb-4">
@@ -108,7 +157,12 @@ const PaymentModal = ({ product, onClose }) => {
             </div>
           )}
 
-          {!paymentInfo ? (
+          {paymentStatus === 'paid' ? (
+            <div className="bg-green-500/20 text-green-300 p-4 rounded text-center">
+              <p className="text-lg font-semibold">Pembayaran Berhasil!</p>
+              <p className="mt-2">Terima kasih atas pembelian Anda.</p>
+            </div>
+          ) : !paymentInfo ? (
             <>
               <div className="space-y-4 mb-6">
                 <div>
@@ -130,14 +184,14 @@ const PaymentModal = ({ product, onClose }) => {
                   {isLoading ? 'Memproses...' : 'Bayar Sekarang'}
                 </button>
                 <button
-                  onClick={onClose}
+                  onClick={handleClose}
                   className="px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-600"
                 >
                   Batal
                 </button>
               </div>
             </>
-          ) : (
+          ) : timeLeft > 0 ? (
             <div className="space-y-4">
               <div>
                 <p className="text-gray-400">Jumlah yang harus dibayar</p>
@@ -151,10 +205,9 @@ const PaymentModal = ({ product, onClose }) => {
               
               {/* QR Code */}
               <div className="flex flex-col items-center bg-white p-4 rounded-lg">
-                {console.log('Payment Info:', paymentInfo)}
                 {paymentInfo.solanaPayLink ? (
                   <>
-                    <QRCodeSVG  
+                    <QRCodeSVG 
                       value={paymentInfo.solanaPayLink}
                       size={200}
                       level="H"
@@ -165,9 +218,7 @@ const PaymentModal = ({ product, onClose }) => {
                     </p>
                   </>
                 ) : (
-                  <p className="text-gray-600">
-      {`Debug: ${JSON.stringify(paymentInfo, null, 2)}`} {/* Tambahkan ini */}
-    </p>
+                  <p className="text-gray-600">QR Code tidak tersedia</p>
                 )}
               </div>
 
@@ -199,6 +250,10 @@ const PaymentModal = ({ product, onClose }) => {
                   Rate: {paymentInfo.rate}
                 </p>
               )}
+            </div>
+          ) : (
+            <div className="text-center text-red-400 p-4">
+              Waktu pembayaran telah habis. Silakan coba lagi.
             </div>
           )}
         </div>
