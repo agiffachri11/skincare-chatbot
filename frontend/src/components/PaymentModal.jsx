@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import QRCode from 'qrcode.react';
 import { useAuth } from '../context/AuthContext';
 
 const PaymentModal = ({ product, onClose }) => {
@@ -135,18 +136,52 @@ const PaymentModal = ({ product, onClose }) => {
             <div>
               <p className="text-gray-400">Jumlah yang harus dibayar</p>
               <p className="text-white font-bold text-xl">
-                {paymentInfo.amount} {paymentInfo.currency}
+                {paymentInfo.convertedAmount}
+              </p>
+              <p className="text-gray-400 text-sm">
+                (Rp {paymentInfo.originalPrice})
               </p>
             </div>
+            
+            {/* QR Code */}
+            <div className="flex flex-col items-center bg-white p-4 rounded-lg">
+              <QRCode 
+                value={paymentInfo.solanaPayLink}
+                size={200}
+                level="H"
+                includeMargin
+                renderAs="svg"
+              />
+              <p className="mt-2 text-xs text-gray-600">
+                Scan untuk membayar dengan Solana Pay
+              </p>
+            </div>
+
             <div>
               <p className="text-gray-400">Alamat Wallet</p>
-              <p className="text-white font-mono bg-gray-700 p-2 rounded break-all">
-                {paymentInfo.walletAddress}
-              </p>
+              <div className="flex items-center space-x-2">
+                <p className="text-white font-mono bg-gray-700 p-2 rounded break-all text-sm">
+                  {paymentInfo.walletAddress}
+                </p>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(paymentInfo.walletAddress);
+                    showNotification('Alamat wallet disalin!', 'success');
+                  }}
+                  className="p-2 bg-blue-600 rounded hover:bg-blue-700"
+                >
+                  📋
+                </button>
+              </div>
             </div>
+
             <p className="text-gray-300 text-sm">
-              Silakan transfer sesuai jumlah yang tertera ke alamat wallet di atas.
+              Silakan transfer {paymentInfo.convertedAmount} ke alamat wallet di atas.
               Status pembayaran akan diupdate secara otomatis setelah pembayaran berhasil.
+            </p>
+
+            <p className="text-gray-400 text-xs">
+              Rate: {paymentInfo.rate}
             </p>
           </div>
         )}
