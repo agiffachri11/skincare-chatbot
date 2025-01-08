@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import QRCode from 'qrcode.react';
+import { QRCodeSVG } from 'qrcode.react';
 import Notification from './Notification';
 import { useAuth } from '../context/AuthContext';
 
@@ -153,12 +153,11 @@ const PaymentModal = ({ product, onClose }) => {
               <div className="flex flex-col items-center bg-white p-4 rounded-lg">
                 {paymentInfo.solanaPayLink ? (
                   <>
-                    <QRCode 
+                    <QRCodeSVG  
                       value={paymentInfo.solanaPayLink}
                       size={200}
                       level="H"
                       includeMargin
-                      renderAs="svg"
                     />
                     <p className="mt-2 text-xs text-gray-600">
                       Scan untuk membayar dengan Solana Pay
