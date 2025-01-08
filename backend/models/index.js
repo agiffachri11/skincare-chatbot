@@ -118,6 +118,41 @@ const paymentSchema = new mongoose.Schema({
   timestamps: true
 });
 
+const transactionSchema = mongoose.Schema({
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    required: true,
+    ref: 'User'
+  },
+  productId: {
+    type: mongoose.Schema.Types.ObjectId,
+    required: true,
+    ref: 'Product'
+  },
+  paymentId: {
+    type: String,
+    required: true
+  },
+  amount: {
+    type: Number,
+    required: true
+  },
+  currency: {
+    type: String,
+    enum: ['SOL', 'USDT'],
+    default: 'SOL'
+  },
+  productName: String,
+  buyerName: String,
+  status: {
+    type: String,
+    enum: ['pending', 'completed', 'failed'],
+    default: 'pending'
+  }
+}, {
+  timestamps: true
+});
+
 // Pre-save hook untuk hash password
 userSchema.pre('save', async function(next) {
   if (!this.isModified('password')) return next();
@@ -135,5 +170,6 @@ const User = mongoose.models.User || mongoose.model('User', userSchema);
 const Product = mongoose.models.Product || mongoose.model('Product', productSchema);
 const Chat = mongoose.models.Chat || mongoose.model('Chat', chatSchema);
 const Payment = mongoose.models.Payment || mongoose.model('Payment', paymentSchema);
+const Transaction = mongoose.models.Transaction || mongoose.model('Transaction', transactionSchema);
 
-module.exports = { Product, Chat, User, Payment };
+module.exports = { Product, Chat, User, Payment, Transaction };
