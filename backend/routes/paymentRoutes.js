@@ -98,55 +98,38 @@ router.get('/check/:paymentID', protect, async (req, res) => {
     const { paymentID } = req.params;
     console.log('Checking payment status for:', paymentID);
 
-    const checkResponse = await axios.post(`https://api-staging.solstra.fi/service/pay/${paymentID}/check`, {}, {
+    // Log request yang akan dikirim
+    console.log('Request to Solstrafi:', {
+      url: `https://api-staging.solstra.fi/service/pay/${paymentID}/check`,
       headers: {
         'X-Api-Key': '7c2e9f0c-3500-4b83-8798-8f7068c422e4'
       }
     });
 
-    console.log('Raw Solstrafi response:', checkResponse.data);
-
-    // Sesuaikan response message dengan format dari dokumentasi
-    // Response: {
-    //     "status": "success",
-    //     "message": "Payment Status: Unpaid",
-    //     "data": {
-    //         "id": "677d3262bcf6b1016a804602",
-    //         "currency": "SOL",
-    //         "amount": 0.00001,
-    //         "walletAddress": "7Msyw4gn6Gp4AASeG3vVzaLMfgE524rQwxYBGwmTETMT",
-    //         "checkPaid": "https://api-staging.solstra.fi/service/pay/${paymentID}/check",
-    //         "isPaid": false
-    //     }
-    // }
-
-    // Jika payment sudah dibayar, update database
-    if (checkResponse.data.status === 'success' && checkResponse.data.message?.includes('Paid')) {
-      await Payment.findOneAndUpdate(
-        { paymentID },
-        { 
-          status: 'paid',
-          updatedAt: new Date() 
+    const checkResponse = await axios.post(
+      `https://api-staging.solstra.fi/service/pay/${paymentID}/check`,
+      {}, // empty body
+      {
+        headers: {
+          'X-Api-Key': '7c2e9f0c-3500-4b83-8798-8f7068c422e4'
         }
-      );
+      }
+    );
 
-      await Transaction.findOneAndUpdate(
-        { paymentID },
-        { 
-          status: 'completed',
-          updatedAt: new Date()
-        }
-      );
-    }
+    // Log full response dari Solstrafi
+    console.log('Solstrafi raw response:', checkResponse);
+    console.log('Solstrafi data:', checkResponse.data);
 
-    // Kirim response ke client
+    // Kirimkan response mentah untuk debugging
     res.json(checkResponse.data);
 
   } catch (error) {
-    console.error('Payment check error:', error.response?.data || error);
+    console.error('Full error:', error);
+    console.error('Response data:', error.response?.data);
     res.status(500).json({ 
       status: 'error',
-      message: 'Gagal mengecek status pembayaran'
+      message: 'Gagal mengecek status pembayaran',
+      error: error.response?.data || error.message
     });
   }
 });
