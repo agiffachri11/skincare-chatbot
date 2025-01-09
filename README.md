@@ -1,13 +1,42 @@
 # Skincare Chatbot with Solana Pay Integration
 
-> Sebuah aplikasi chatbot yang menyediakan rekomendasi produk skincare dan terintegrasi dengan pembayaran menggunakan Solana.
+> A chatbot application that provides skincare product recommendations integrated with Solana payment gateway.
 
-## Demo
+## 💻 Demo
 - **Frontend:** [skincare-chatbot-kappa.vercel.app](https://skincare-chatbot-kappa.vercel.app/)
 - **Backend:** [skincare-chatbot-production.up.railway.app](https://skincare-chatbot-production.up.railway.app/)
 
-## Fitur
-- **🤖 Rekomendasi produk** menggunakan AI chatbot
-- **🔐 Autentikasi pengguna** (login & register)
-- **💰 Integrasi pembayaran** dengan cryptocurrency Solana
-- **⚡ Pengecekan status pembayaran** real-time
+## ✨ Features
+- **🤖 Product recommendations** using AI chatbot
+- **🔐 User authentication** (login & register)
+- **💰 Payment integration** with Solana cryptocurrency
+- **⚡ Real-time payment status** checking
+
+## 🔗 API Documentation 
+
+### 1️⃣ Internal APIs (Skincare Chatbot)
+
+#### 🔒 Authentication API
+
+##### Register User
+```http
+POST /api/auth/register
+Content-Type: application/json
+
+# Body
+{
+    "username": "string",
+    "email": "string", 
+    "password": "string"
+}
+
+# Response 
+{
+    "message": "Registrasi berhasil",
+    "token": "string",
+    "user": {
+        "id": "string",
+        "username": "string",
+        "email": "string" 
+    }
+}
