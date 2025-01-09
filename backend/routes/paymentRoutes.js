@@ -98,7 +98,6 @@ router.get('/check/:paymentID', protect, async (req, res) => {
     const { paymentID } = req.params;
     console.log('Checking payment status for:', paymentID);
 
-    // Log request yang akan dikirim
     console.log('Request to Solstrafi:', {
       url: `https://api-staging.solstra.fi/service/pay/${paymentID}/check`,
       headers: {
@@ -106,26 +105,34 @@ router.get('/check/:paymentID', protect, async (req, res) => {
       }
     });
 
-    const checkResponse = await axios.post(
+    // Ubah dari POST ke GET dan hapus body kosong
+    const checkResponse = await axios.get(
       `https://api-staging.solstra.fi/service/pay/${paymentID}/check`,
-      {}, // empty body
       {
         headers: {
+          'Content-Type': 'application/json',
           'X-Api-Key': '7c2e9f0c-3500-4b83-8798-8f7068c422e4'
         }
       }
     );
 
-    // Log full response dari Solstrafi
     console.log('Solstrafi raw response:', checkResponse);
-    console.log('Solstrafi data:', checkResponse.data);
 
-    // Kirimkan response mentah untuk debugging
-    res.json(checkResponse.data);
+    // Return response langsung untuk debug
+    res.json({
+      status: checkResponse.data.status,
+      message: checkResponse.data.message,
+      data: checkResponse.data.data,
+      raw: checkResponse.data // untuk debugging
+    });
 
   } catch (error) {
-    console.error('Full error:', error);
-    console.error('Response data:', error.response?.data);
+    console.error('Full error details:', {
+      message: error.message,
+      response: error.response?.data,
+      status: error.response?.status
+    });
+    
     res.status(500).json({ 
       status: 'error',
       message: 'Gagal mengecek status pembayaran',
