@@ -96,53 +96,51 @@ router.post('/create-payment', protect, async (req, res) => {
 router.get('/check/:paymentID', protect, async (req, res) => {
   try {
     const { paymentID } = req.params;
-    console.log('Checking payment status from Solstrafi for:', paymentID);
+    console.log('Checking payment status for:', paymentID);
 
-    // Check ke Solstrafi
     const checkResponse = await axios.post(`https://api-staging.solstra.fi/service/pay/${paymentID}/check`, {}, {
       headers: {
         'X-Api-Key': '7c2e9f0c-3500-4b83-8798-8f7068c422e4'
       }
     });
 
-    console.log('Solstrafi check response:', checkResponse.data);
-    
-    if (checkResponse.data.data?.isPaid) {
-      // Update kedua collection sekaligus
-      await Promise.all([
-        Payment.findOneAndUpdate(
-          { paymentID },
-          { 
-            status: 'paid',
-            updatedAt: new Date()
-          }
-        ),
-        Transaction.findOneAndUpdate(
-          { paymentID },
-          { 
-            status: 'completed',
-            updatedAt: new Date()
-          }
-        )
-      ]);
+    console.log('Solstrafi response:', checkResponse.data);
 
-      // Kirim response sukses
+    // Sesuaikan dengan format response dari Solstrafi
+    if (checkResponse.data.status === 'success') {
+      const isPaid = checkResponse.data.data?.isPaid;
+
+      if (isPaid) {
+        // Update database jika sudah dibayar
+        await Payment.findOneAndUpdate(
+          { paymentID }, 
+          { status: 'paid' }
+        );
+        
+        await Transaction.findOneAndUpdate(
+          { paymentID },
+          { status: 'completed' }
+        );
+      }
+
       res.json({
         status: 'success',
+        message: isPaid ? 'Payment completed' : 'Payment pending',
         data: {
           ...checkResponse.data.data,
-          isPaid: true,
-          status: 'completed'
+          isPaid: !!isPaid
         }
       });
     } else {
-      // Jika belum dibayar, kirim status dari Solstrafi
       res.json(checkResponse.data);
     }
 
   } catch (error) {
-    console.error('Payment check error:', error);
-    res.status(500).json({ message: 'Gagal mengecek status pembayaran' });
+    console.error('Payment check error:', error.response?.data || error);
+    res.status(500).json({ 
+      status: 'error',
+      message: 'Gagal mengecek status pembayaran'
+    });
   }
 });
 
