@@ -48,14 +48,12 @@ const PaymentModal = ({ product, onClose }) => {
     try {
       setIsLoading(true);
       
-      console.log('Current payment info:', paymentInfo);
-      
       const paymentID = paymentInfo?.paymentID;
       if (!paymentID) {
         showNotification('Data pembayaran tidak valid', 'error');
         return;
       }
-  
+
       const response = await fetch(
         `https://skincare-chatbot-production.up.railway.app/api/payment/check/${paymentID}`,
         {
@@ -64,17 +62,21 @@ const PaymentModal = ({ product, onClose }) => {
           }
         }
       );
-  
+
       const data = await response.json();
       console.log('Check payment response:', data);
-  
+
       if (data.status === 'success') {
-        if (data.message.includes('Paid')) {
+        if (data.data?.isPaid || data.message?.includes('Paid')) {
           setPaymentStatus('paid');
-          showNotification('Pembayaran berhasil!', 'success');
-          setTimeout(() => onClose(), 2000);
+          showNotification('Pembayaran berhasil! Terima kasih.', 'success');
+          // Beri jeda sebelum menutup modal
+          setTimeout(() => {
+            onClose();
+            showNotification('Transaksi selesai', 'success');
+          }, 2000);
         } else {
-          showNotification(data.message, 'info');
+          showNotification('Menunggu pembayaran...', 'info');
         }
       } else {
         showNotification(data.message || 'Gagal mengecek status', 'error');
@@ -140,13 +142,16 @@ const PaymentModal = ({ product, onClose }) => {
 
   const handleClose = () => {
     if (paymentStatus === 'paid') {
+      showNotification('Pembayaran berhasil selesai!', 'success');
       onClose();
       return;
     }
 
+    // Jika belum dibayar, tampilkan konfirmasi
     if (paymentInfo && !paymentStatus) {
-      const confirm = window.confirm('Menutup jendela ini akan membatalkan pembayaran. Lanjutkan?');
+      const confirm = window.confirm('Yakin ingin membatalkan pembayaran?');
       if (!confirm) return;
+      showNotification('Pembayaran dibatalkan', 'info');
     }
     onClose();
   };
