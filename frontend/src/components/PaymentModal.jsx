@@ -47,10 +47,19 @@ const PaymentModal = ({ product, onClose }) => {
   const handleCheckStatus = async () => {
     try {
       setIsLoading(true);
-      console.log('Checking payment with ID:', paymentInfo.id); 
+      // Log untuk memastikan data yang diterima
+      console.log('Current Payment Info:', {
+        fullInfo: paymentInfo,
+        id: paymentInfo.id,
+        paymentID: paymentInfo.paymentID
+      });
+  
+      // paymentID ada di dalam data.id dari response Solstrafi
+      const paymentID = paymentInfo.id;
+      console.log('Checking payment with ID:', paymentID);
   
       const response = await fetch(
-        `https://skincare-chatbot-production.up.railway.app/api/payment/check/${paymentInfo.id}`,
+        `https://skincare-chatbot-production.up.railway.app/api/payment/check/${paymentID}`,
         {
           headers: {
             'Authorization': `Bearer ${token}`
@@ -61,13 +70,12 @@ const PaymentModal = ({ product, onClose }) => {
       const data = await response.json();
       console.log('Payment check response:', data);
   
-      // Periksa sesuai format response teman Anda
-      if (data.status === "success" && data.data?.isPaid) {
+      if (data.data?.isPaid) {
         setPaymentStatus('paid');
         showNotification('Pembayaran berhasil!', 'success');
         setTimeout(() => onClose(), 2000);
       } else {
-        showNotification(`Status: ${data.message || 'Pembayaran belum selesai'}`, 'info');
+        showNotification('Pembayaran belum selesai', 'info');
       }
     } catch (error) {
       console.error('Error checking status:', error);
@@ -101,6 +109,13 @@ const PaymentModal = ({ product, onClose }) => {
       console.log('Payment response:', data);
 
       if (data.status === 'success') {
+        // Tambahkan log ini untuk melihat detail data yang akan disimpan
+        console.log('Payment Info to be saved:', {
+          responseData: data.data,
+          id: data.data.id, // Pastikan ini ada
+          paymentID: data.data.paymentID // Cek apakah ini juga ada
+        });
+        
         setPaymentInfo(data.data);
         showNotification('Pembayaran siap diproses', 'success');
       } else {
