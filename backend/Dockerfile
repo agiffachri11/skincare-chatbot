@@ -2,13 +2,13 @@ FROM node:18
 
 WORKDIR /app
 
-# Tidak perlu include "backend/"
-COPY package*.json ./
+# Copy package.json dan package-lock.json dari folder backend
+COPY backend/package*.json ./
 
 RUN npm install
 
-# Tidak perlu include "backend/"
-COPY . .
+# Copy seluruh konten folder backend
+COPY backend/ .
 
 EXPOSE 8080
 
