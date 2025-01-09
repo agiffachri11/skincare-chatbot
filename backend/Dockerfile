@@ -1,15 +1,14 @@
-# backend/Dockerfile
 FROM node:18
 
 WORKDIR /app
 
-# Copy package.json dari folder backend
-COPY backend/package*.json ./
+# Tidak perlu include "backend/"
+COPY package*.json ./
 
 RUN npm install
 
-# Copy seluruh konten folder backend
-COPY backend/ .
+# Tidak perlu include "backend/"
+COPY . .
 
 EXPOSE 8080
 
