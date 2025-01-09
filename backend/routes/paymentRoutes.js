@@ -74,6 +74,7 @@ router.post('/create-payment', protect, async (req, res) => {
       data: {
         ...paymentData.data,
         productName: product.name,
+        id: paymentData.data.id,
         originalPrice: `Rp ${product.price.toLocaleString('id-ID')}`,
         convertedAmount: `${solAmount} SOL`,
         rate: `1 SOL = Rp ${SOL_TO_IDR.toLocaleString('id-ID')}`,

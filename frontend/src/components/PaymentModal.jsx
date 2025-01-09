@@ -47,16 +47,18 @@ const PaymentModal = ({ product, onClose }) => {
   const handleCheckStatus = async () => {
     try {
       setIsLoading(true);
-      // Log untuk memastikan data yang diterima
-      console.log('Current Payment Info:', {
-        fullInfo: paymentInfo,
-        id: paymentInfo.id,
-        paymentID: paymentInfo.paymentID
-      });
-  
-      // paymentID ada di dalam data.id dari response Solstrafi
+      
+      // Log untuk debug
+      console.log('Full payment info:', paymentInfo);
+      
+      // paymentID seharusnya ada di response dari create payment
       const paymentID = paymentInfo.id;
-      console.log('Checking payment with ID:', paymentID);
+  
+      if (!paymentID) {
+        console.error('No payment ID found:', paymentInfo);
+        showNotification('Data pembayaran tidak valid', 'error');
+        return;
+      }
   
       const response = await fetch(
         `https://skincare-chatbot-production.up.railway.app/api/payment/check/${paymentID}`,
@@ -68,9 +70,9 @@ const PaymentModal = ({ product, onClose }) => {
       );
   
       const data = await response.json();
-      console.log('Payment check response:', data);
+      console.log('Check payment response:', data);
   
-      if (data.data?.isPaid) {
+      if (data.status === 'success' && data.data?.isPaid) {
         setPaymentStatus('paid');
         showNotification('Pembayaran berhasil!', 'success');
         setTimeout(() => onClose(), 2000);
@@ -78,7 +80,7 @@ const PaymentModal = ({ product, onClose }) => {
         showNotification('Pembayaran belum selesai', 'info');
       }
     } catch (error) {
-      console.error('Error checking status:', error);
+      console.error('Error checking payment status:', error);
       showNotification('Gagal mengecek status', 'error');
     } finally {
       setIsLoading(false);
