@@ -97,6 +97,7 @@ router.get('/check/:paymentID', protect, async (req, res) => {
     const { paymentID } = req.params;
     console.log('Checking payment status from Solstrafi for:', paymentID);
 
+    // Check ke Solstrafi
     const checkResponse = await axios.post(`https://api-staging.solstra.fi/service/pay/${paymentID}/check`, {}, {
       headers: {
         'X-Api-Key': '7c2e9f0c-3500-4b83-8798-8f7068c422e4'
@@ -106,22 +107,38 @@ router.get('/check/:paymentID', protect, async (req, res) => {
     console.log('Solstrafi check response:', checkResponse.data);
     
     if (checkResponse.data.data?.isPaid) {
-      // Update local database jika pembayaran sukses
-      await Payment.findOneAndUpdate(
-        { paymentID },
-        { status: 'paid' }
-      );
-      
-      await Transaction.findOneAndUpdate(
-        { paymentID },
-        { 
-          status: 'completed',
-          updatedAt: new Date()
+      // Update kedua collection sekaligus
+      await Promise.all([
+        Payment.findOneAndUpdate(
+          { paymentID },
+          { 
+            status: 'paid',
+            updatedAt: new Date()
+          }
+        ),
+        Transaction.findOneAndUpdate(
+          { paymentID },
+          { 
+            status: 'completed',
+            updatedAt: new Date()
+          }
+        )
+      ]);
+
+      // Kirim response sukses
+      res.json({
+        status: 'success',
+        data: {
+          ...checkResponse.data.data,
+          isPaid: true,
+          status: 'completed'
         }
-      );
+      });
+    } else {
+      // Jika belum dibayar, kirim status dari Solstrafi
+      res.json(checkResponse.data);
     }
 
-    res.json(checkResponse.data);
   } catch (error) {
     console.error('Payment check error:', error);
     res.status(500).json({ message: 'Gagal mengecek status pembayaran' });

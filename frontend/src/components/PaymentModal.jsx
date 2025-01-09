@@ -49,17 +49,20 @@ const PaymentModal = ({ product, onClose }) => {
       setIsLoading(true);
       
       // Log untuk debug
-      console.log('Full payment info:', paymentInfo);
+      console.log('Payment info:', {
+        fullInfo: paymentInfo,
+        paymentID: paymentInfo?.paymentID
+      });
       
-      // paymentID seharusnya ada di response dari create payment
-      const paymentID = paymentInfo.id;
-  
+      // Gunakan paymentID langsung dari paymentInfo
+      const paymentID = paymentInfo?.paymentID;
+      
       if (!paymentID) {
-        console.error('No payment ID found:', paymentInfo);
+        console.error('Payment ID not found:', paymentInfo);
         showNotification('Data pembayaran tidak valid', 'error');
         return;
       }
-  
+      
       const response = await fetch(
         `https://skincare-chatbot-production.up.railway.app/api/payment/check/${paymentID}`,
         {
@@ -68,24 +71,24 @@ const PaymentModal = ({ product, onClose }) => {
           }
         }
       );
-  
+   
       const data = await response.json();
       console.log('Check payment response:', data);
-  
-      if (data.status === 'success' && data.data?.isPaid) {
+   
+      if (data.data?.isPaid) {
         setPaymentStatus('paid');
         showNotification('Pembayaran berhasil!', 'success');
         setTimeout(() => onClose(), 2000);
       } else {
-        showNotification('Pembayaran belum selesai', 'info');
+        showNotification(`Status: ${data.message || 'Pembayaran belum selesai'}`, 'info'); 
       }
     } catch (error) {
-      console.error('Error checking payment status:', error);
-      showNotification('Gagal mengecek status', 'error');
+      console.error('Error checking status:', error);
+      showNotification('Gagal mengecek status pembayaran', 'error');
     } finally {
       setIsLoading(false);
     }
-  };
+   };
 
   const handlePayment = async () => {
     try {
