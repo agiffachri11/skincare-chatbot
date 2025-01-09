@@ -12,7 +12,6 @@ const PaymentModal = ({ product, onClose }) => {
   const [error, setError] = useState(null);
   const [notification, setNotification] = useState(null);
   const [timeLeft, setTimeLeft] = useState(300); // 5 menit dalam detik
-  const [isPending, setIsPending] = useState(false);
 
   const showNotification = (message, type) => {
     setNotification({ message, type });
@@ -38,81 +37,44 @@ const PaymentModal = ({ product, onClose }) => {
     return () => clearInterval(timer);
   }, [paymentInfo]);
 
-  // Payment status check
-  useEffect(() => {
-    let intervalId;
-    if (paymentInfo?.paymentID) {
-      intervalId = setInterval(checkPaymentStatus, 5000); // Cek setiap 5 detik
-    }
-    return () => {
-      if (intervalId) clearInterval(intervalId);
-    };
-  }, [paymentInfo]);
-
   const formatTimeLeft = () => {
     const minutes = Math.floor(timeLeft / 60);
     const seconds = timeLeft % 60;
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
 
-  const checkPaymentStatus = async () => {
+  // Fungsi untuk cek status manual
+  const handleCheckStatus = async () => {
     try {
-      if (!paymentInfo?.paymentID) return;
-      
-      console.log('Checking transaction status for:', paymentInfo.paymentID);
-      setIsPending(true);
-  
+      setIsLoading(true);
       const response = await fetch(
-        `https://skincare-chatbot-production.up.railway.app/api/payment/transaction/${paymentInfo.paymentID}`,
+        `https://skincare-chatbot-production.up.railway.app/api/payment/check/${paymentInfo.paymentID}`,
         {
           headers: {
             'Authorization': `Bearer ${token}`
           }
         }
       );
-  
+
       const data = await response.json();
-      console.log('Transaction status response:', data);
-  
-      if (data.success && 
-         (data.data.transactionStatus === 'completed' || 
-          data.data.paymentStatus === 'paid')) {
+      console.log('Payment status:', data);
+
+      if (data.data?.isPaid) {
         setPaymentStatus('paid');
-        setIsPending(false);
         showNotification('Pembayaran berhasil!', 'success');
-        // Tambah delay sebelum menutup
         setTimeout(() => {
-          showNotification('Transaksi selesai!', 'success');
           onClose();
         }, 2000);
-        return true; // Pembayaran selesai
+      } else {
+        showNotification('Pembayaran belum selesai', 'info');
       }
-  
-      return false; // Pembayaran belum selesai
     } catch (error) {
-      console.error('Error checking transaction status:', error);
-      setIsPending(false);
-      return false;
+      console.error('Error checking status:', error);
+      showNotification('Gagal mengecek status', 'error');
+    } finally {
+      setIsLoading(false);
     }
   };
-  
-  // Polling lebih agresif saat menunggu pembayaran
-  useEffect(() => {
-    let intervalId;
-    
-    if (paymentInfo?.paymentID && !paymentStatus) {
-      intervalId = setInterval(async () => {
-        const isCompleted = await checkPaymentStatus();
-        if (isCompleted) {
-          clearInterval(intervalId);
-        }
-      }, 3000); // Cek setiap 3 detik
-    }
-  
-    return () => {
-      if (intervalId) clearInterval(intervalId);
-    };
-  }, [paymentInfo, paymentStatus]);
 
   const handlePayment = async () => {
     try {
@@ -152,13 +114,13 @@ const PaymentModal = ({ product, onClose }) => {
     }
   };
 
-  const handleClose = async () => {
+  const handleClose = () => {
     if (paymentStatus === 'paid') {
       onClose();
       return;
     }
 
-    if (paymentInfo?.paymentID && !paymentStatus) {
+    if (paymentInfo && !paymentStatus) {
       const confirm = window.confirm('Menutup jendela ini akan membatalkan pembayaran. Lanjutkan?');
       if (!confirm) return;
     }
@@ -277,22 +239,26 @@ const PaymentModal = ({ product, onClose }) => {
                 </div>
               </div>
 
+              {/* Tombol Check Status */}
+              <div className="flex justify-center mt-4">
+                <button
+                  onClick={handleCheckStatus}
+                  disabled={isLoading}
+                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+                >
+                  {isLoading ? 'Mengecek Status...' : 'Cek Status Pembayaran'}
+                </button>
+              </div>
+
               <p className="text-gray-300 text-sm">
                 Silakan transfer {paymentInfo.convertedAmount} ke alamat wallet di atas.
-                Status pembayaran akan diupdate secara otomatis setelah pembayaran berhasil.
+                Klik tombol di atas untuk mengecek status pembayaran setelah melakukan transfer.
               </p>
 
               {paymentInfo.rate && (
                 <p className="text-gray-400 text-xs">
                   Rate: {paymentInfo.rate}
                 </p>
-              )}
-              {isPending && (
-                <div className="mt-4 text-center">
-                  <p className="text-yellow-400">
-                    Menunggu konfirmasi pembayaran...
-                  </p>
-                </div>
               )}
             </div>
           ) : (
