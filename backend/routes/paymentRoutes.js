@@ -98,39 +98,37 @@ router.get('/check/:paymentID', protect, async (req, res) => {
     const { paymentID } = req.params;
     console.log('Checking payment status for:', paymentID);
 
+    // Remove trailing semicolon from URL
+    const url = `https://api-staging.solstra.fi/service/pay/${paymentID}/check`;
+    
     console.log('Request to Solstrafi:', {
-      url: `https://api-staging.solstra.fi/service/pay/${paymentID}/check`,
+      method: 'POST',
+      url,
       headers: {
+        'Content-Type': 'application/json',
         'X-Api-Key': '7c2e9f0c-3500-4b83-8798-8f7068c422e4'
       }
     });
 
-    // Ubah dari POST ke GET dan hapus body kosong
-    const checkResponse = await axios.get(
-      `https://api-staging.solstra.fi/service/pay/${paymentID}/check`,
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Api-Key': '7c2e9f0c-3500-4b83-8798-8f7068c422e4'
-        }
+    const checkResponse = await axios({
+      method: 'post',
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Api-Key': '7c2e9f0c-3500-4b83-8798-8f7068c422e4'
       }
-    );
-
-    console.log('Solstrafi raw response:', checkResponse);
-
-    // Return response langsung untuk debug
-    res.json({
-      status: checkResponse.data.status,
-      message: checkResponse.data.message,
-      data: checkResponse.data.data,
-      raw: checkResponse.data // untuk debugging
     });
+
+    console.log('Solstrafi response:', checkResponse.data);
+
+    res.json(checkResponse.data);
 
   } catch (error) {
     console.error('Full error details:', {
       message: error.message,
       response: error.response?.data,
-      status: error.response?.status
+      status: error.response?.status,
+      url: error.config?.url
     });
     
     res.status(500).json({ 
