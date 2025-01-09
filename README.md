@@ -15,7 +15,7 @@
 
 ## 🔗 API Documentation 
 
-###1️⃣ Internal APIs (Skincare Chatbot)
+### 1️⃣ Internal APIs (Skincare Chatbot)
 
 #### 🔒 Authentication API
 
