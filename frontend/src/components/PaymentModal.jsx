@@ -47,13 +47,11 @@ const PaymentModal = ({ product, onClose }) => {
   const handleCheckStatus = async () => {
     try {
       setIsLoading(true);
-      console.log('Checking payment status for:', paymentInfo.paymentID);
+      console.log('Checking payment with ID:', paymentInfo.id); 
   
-      // Ubah ke endpoint /check
       const response = await fetch(
-        `https://skincare-chatbot-production.up.railway.app/api/payment/check/${paymentInfo.paymentID}`,
+        `https://skincare-chatbot-production.up.railway.app/api/payment/check/${paymentInfo.id}`,
         {
-          method: 'GET',
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -61,15 +59,15 @@ const PaymentModal = ({ product, onClose }) => {
       );
   
       const data = await response.json();
-      console.log('Status check response:', data);
+      console.log('Payment check response:', data);
   
-      // Ubah pengecekan sesuai response dari Solstrafi
-      if (data.data?.isPaid) {
+      // Periksa sesuai format response teman Anda
+      if (data.status === "success" && data.data?.isPaid) {
         setPaymentStatus('paid');
         showNotification('Pembayaran berhasil!', 'success');
         setTimeout(() => onClose(), 2000);
       } else {
-        showNotification('Pembayaran belum selesai', 'info');
+        showNotification(`Status: ${data.message || 'Pembayaran belum selesai'}`, 'info');
       }
     } catch (error) {
       console.error('Error checking status:', error);
