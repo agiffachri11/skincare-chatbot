@@ -24,14 +24,14 @@
 POST /api/auth/register
 Content-Type: application/json
 
-# Body
+Body
 {
     "username": "string",
     "email": "string", 
     "password": "string"
 }
 
-# Response 
+Response 
 {
     "message": "Registrasi berhasil",
     "token": "string",
