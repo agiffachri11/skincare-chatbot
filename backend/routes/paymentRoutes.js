@@ -104,36 +104,43 @@ router.get('/check/:paymentID', protect, async (req, res) => {
       }
     });
 
-    console.log('Solstrafi response:', checkResponse.data);
+    console.log('Raw Solstrafi response:', checkResponse.data);
 
-    // Sesuaikan dengan format response dari Solstrafi
-    if (checkResponse.data.status === 'success') {
-      const isPaid = checkResponse.data.data?.isPaid;
+    // Sesuaikan response message dengan format dari dokumentasi
+    // Response: {
+    //     "status": "success",
+    //     "message": "Payment Status: Unpaid",
+    //     "data": {
+    //         "id": "677d3262bcf6b1016a804602",
+    //         "currency": "SOL",
+    //         "amount": 0.00001,
+    //         "walletAddress": "7Msyw4gn6Gp4AASeG3vVzaLMfgE524rQwxYBGwmTETMT",
+    //         "checkPaid": "https://api-staging.solstra.fi/service/pay/${paymentID}/check",
+    //         "isPaid": false
+    //     }
+    // }
 
-      if (isPaid) {
-        // Update database jika sudah dibayar
-        await Payment.findOneAndUpdate(
-          { paymentID }, 
-          { status: 'paid' }
-        );
-        
-        await Transaction.findOneAndUpdate(
-          { paymentID },
-          { status: 'completed' }
-        );
-      }
-
-      res.json({
-        status: 'success',
-        message: isPaid ? 'Payment completed' : 'Payment pending',
-        data: {
-          ...checkResponse.data.data,
-          isPaid: !!isPaid
+    // Jika payment sudah dibayar, update database
+    if (checkResponse.data.status === 'success' && checkResponse.data.message?.includes('Paid')) {
+      await Payment.findOneAndUpdate(
+        { paymentID },
+        { 
+          status: 'paid',
+          updatedAt: new Date() 
         }
-      });
-    } else {
-      res.json(checkResponse.data);
+      );
+
+      await Transaction.findOneAndUpdate(
+        { paymentID },
+        { 
+          status: 'completed',
+          updatedAt: new Date()
+        }
+      );
     }
+
+    // Kirim response ke client
+    res.json(checkResponse.data);
 
   } catch (error) {
     console.error('Payment check error:', error.response?.data || error);

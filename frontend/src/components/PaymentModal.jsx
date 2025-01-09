@@ -68,9 +68,8 @@ const PaymentModal = ({ product, onClose }) => {
       const data = await response.json();
       console.log('Check payment response:', data);
   
-      // Sesuaikan pengecekan dengan format response yang baru
       if (data.status === 'success') {
-        if (data.data?.isPaid) {
+        if (data.message.includes('Paid')) {
           setPaymentStatus('paid');
           showNotification('Pembayaran berhasil!', 'success');
           setTimeout(() => onClose(), 2000);
