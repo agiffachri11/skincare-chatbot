@@ -53,7 +53,7 @@ const PaymentModal = ({ product, onClose }) => {
         showNotification('Data pembayaran tidak valid', 'error');
         return;
       }
-
+  
       const response = await fetch(
         `https://skincare-chatbot-production.up.railway.app/api/payment/check/${paymentID}`,
         {
@@ -62,18 +62,17 @@ const PaymentModal = ({ product, onClose }) => {
           }
         }
       );
-
+  
       const data = await response.json();
       console.log('Check payment response:', data);
-
+  
       if (data.status === 'success') {
         if (data.data?.isPaid || data.message?.includes('Paid')) {
           setPaymentStatus('paid');
           showNotification('Pembayaran berhasil! Terima kasih.', 'success');
-          // Beri jeda sebelum menutup modal
+          // Hanya perlu satu notifikasi saat sukses
           setTimeout(() => {
-            onClose();
-            showNotification('Transaksi selesai', 'success');
+            onClose(); // Tutup modal tanpa notifikasi tambahan
           }, 2000);
         } else {
           showNotification('Menunggu pembayaran...', 'info');
@@ -141,18 +140,19 @@ const PaymentModal = ({ product, onClose }) => {
   };
 
   const handleClose = () => {
+    // Jika pembayaran sudah selesai, langsung tutup tanpa notifikasi tambahan
     if (paymentStatus === 'paid') {
-      showNotification('Pembayaran berhasil selesai!', 'success');
       onClose();
       return;
     }
-
-    // Jika belum dibayar, tampilkan konfirmasi
+  
+    // Jika masih dalam proses pembayaran, tampilkan konfirmasi
     if (paymentInfo && !paymentStatus) {
       const confirm = window.confirm('Yakin ingin membatalkan pembayaran?');
       if (!confirm) return;
       showNotification('Pembayaran dibatalkan', 'info');
     }
+    
     onClose();
   };
 
