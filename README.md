@@ -1,4 +1,4 @@
-# Skincare Chatbot with Solana Pay Integration
+# Skincare Assistant with Solana Pay Integration
 
 > A chatbot application that provides skincare product recommendations integrated with Solana payment gateway.
 
