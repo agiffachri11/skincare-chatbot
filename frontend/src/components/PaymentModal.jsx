@@ -114,14 +114,20 @@ const PaymentModal = ({ product, onClose }) => {
       console.log('Payment response:', data);
 
       if (data.status === 'success') {
-        // Tambahkan log ini untuk melihat detail data yang akan disimpan
-        console.log('Payment Info to be saved:', {
-          responseData: data.data,
-          id: data.data.id, // Pastikan ini ada
-          paymentID: data.data.paymentID // Cek apakah ini juga ada
+        // Log data yang diterima
+        console.log('Create payment response:', {
+          fullResponse: data,
+          paymentData: data.data,
+          id: data.data.id,
+          paymentID: data.data.paymentID
         });
         
-        setPaymentInfo(data.data);
+        // Simpan semua data yang diperlukan
+        setPaymentInfo({
+          ...data.data,
+          paymentID: data.data.id // pastikan paymentID tersimpan
+        });
+        
         showNotification('Pembayaran siap diproses', 'success');
       } else {
         throw new Error(data.message || 'Terjadi kesalahan saat membuat pembayaran');

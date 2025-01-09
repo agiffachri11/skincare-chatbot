@@ -73,8 +73,9 @@ router.post('/create-payment', protect, async (req, res) => {
       status: 'success',
       data: {
         ...paymentData.data,
+        id: paymentData.data.id,         // dari Solstrafi
+        paymentID: paymentData.data.id,  // untuk konsistensi dengan DB
         productName: product.name,
-        id: paymentData.data.id,
         originalPrice: `Rp ${product.price.toLocaleString('id-ID')}`,
         convertedAmount: `${solAmount} SOL`,
         rate: `1 SOL = Rp ${SOL_TO_IDR.toLocaleString('id-ID')}`,
